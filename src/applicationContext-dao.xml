@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<!--<bean id="baseDao" class="com.speed.base.dao.impl.BaseDaoImpl">
+		<property name="sqlSessionFactory" ref="sqlSessionFactory" />
+	</bean>
+
+	-->
+	<!-- mybatis的再次封装类 -->
+	<bean id="baseDao" class="com.speed.base.dao.impl.BaseDaoImpl">
+		<property name="sqlSessionBeans" ref="sqlSessionMap"/>
+	</bean>
+	<bean id="batchDao" class="com.speed.base.dao.impl.BatchDaoImpl">
+		<property name="sqlSessionBeans" ref="sqlSessionMap"/>
+	</bean>
+	
+</beans>
+

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.speed.hfreport.vo">
+	<resultMap id="keyValue" type="keyValue">
+		<result property="key" column="BUSINESS_ID"></result>
+		<result property="value" column="BUSINESS_NAME"></result>
+	</resultMap>
+	
+	<select id="queryBusinessName" resultMap="keyValue">
+		select t.business_id,t.business_name from cs_businessinfo t
+		where t.business_status = 0
+	</select>
+	<select id="queryQueueName" parameterType="int" resultType="keyValue">
+    select t.queue_id key,
+       t.queue_name value
+from   cs_queueinfo t
+where  t.business_id = #{businessId}
+    </select>
+</mapper>

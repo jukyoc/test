@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.speed.management.quartz.vo">
+	
+<!-- 	<typeAlias alias="schedulerJobVO" type="com.speed.management.quartz.vo.SchedulerJob" /> -->
+
+	<resultMap id="schedulerJobMap" type="com.speed.management.quartz.vo.SchedulerJob">
+		<result property="jobName" column="jobName"></result>
+		<result property="jobDesc" column="jobDesc"></result>
+		<result property="nextExecDate" column="nextExecDate"></result>
+		<result property="lastExecDate" column="lastExecDate"></result>
+		<result property="jobStatus" column="jobStatus"></result>
+		<result property="jobClassFullName" column="jobClassFullName"></result>
+		<result property="triggerName" column="triggerName"></result>
+		<result property="triggerGroup" column="triggerGroup"></result>
+	</resultMap>
+	
+	<resultMap id="jobInfoVoMap" type="com.speed.management.quartz.vo.JobInfo">
+		<result property="jobId" column="jobId"></result>
+		<result property="jobName" column="jobName"></result>
+		<result property="jobGroup" column="jobGroup"></result>
+		<result property="createAgentId" column="createAgentId"></result>
+		<result property="createAgentName" column="createAgentName"></result>
+		<result property="createTime" column="createTime"></result>
+	</resultMap>
+	
+	<resultMap id="jobLogVoMap" type="com.speed.management.quartz.vo.OperateLog">
+		<result property="logId" column="logId"></result>
+		<result property="logStatus" column="logStatus"></result>
+		<result property="agentId" column="agentId"></result>
+		<result property="agentName" column="agentName"></result>
+		<result property="createTime" column="createTime"></result>
+		<result property="remark" column="remark"></result>
+		<result property="jobId" column="jobId"></result>
+	</resultMap>
+	<resultMap id="jobRunLogVoMap" type="com.speed.management.quartz.vo.JobRunLog">
+		<result property="logId" column="logId"></result>
+		<result property="jobId" column="jobId"></result>
+		<result property="execBeginTime" column="execBeginTime"></result>
+		<result property="execEndTime" column="execEndTime"></result>
+		<result property="execStatus" column="execStatus"></result>
+		<result property="errorMessage" column="errorMessage"></result>
+	</resultMap>
+	
+	<sql id="querySchedulerJobPagSql">
+		select 
+           jobs.job_name as jobName,
+           jobs.job_group as jobGroup,
+           jobs.description as jobDesc,
+           to_char(to_date('1970-01-01 00:00:00','yyyy-mm--dd hh24:mi:ss')+(trgs.next_fire_time/1000/60/60+8)/24,'yyyy-mm-dd hh24:mi:ss') as nextExecDate,
+           to_char(to_date('1970-01-01 00:00:00','yyyy-mm--dd hh24:mi:ss')+ (trgs.prev_fire_time/1000/60/60+8)/24,'yyyy-mm-dd hh24:mi:ss') as lastExecDate,
+           trgs.trigger_state as jobStatus,
+           trgs.trigger_name as triggerName,
+           trgs.trigger_group as triggerGroup,
+           jobs.job_class_name as jobClassFullName
+         <include refid="querySchedulerJobWhere" />
+     
+	</sql>
+	<sql id="querySchedulerJobWhere">
+		 from qrtz_triggers trgs
+	     	 ,qrtz_job_details jobs
+	     where trgs.sched_name=jobs.sched_name
+	     	 and trgs.job_name=jobs.job_name
+	    	 and trgs.job_group=jobs.job_group
+	   <if test="jobName != null and jobName != ''"> 
+	         and jobs.job_name=#{jobName}
+	   </if>
+	    <if test="jobGroup != null and jobGroup != ''"> 
+	         and jobs.job_group=#{jobGroup}
+	   </if>
+	    <if test="jobStatus != null and jobStatus != ''"> 
+	         and trgs.trigger_state=#{jobStatus}
+	   </if>
+	    <if test="jobClassFullName != null and jobClassFullName != ''"> 
+	         and jobs.job_class_name=#{jobClassFullName}
+	   </if>
+	    <if test="nextExecDateBegin != null and nextExecDateBegin != ''"> 
+	         and trgs.next_fire_time>=to_number((to_date(#{nextExecDateBegin},'yyyy-mm-dd hh24:mi:ss')-to_date('1970-01-01','yyyy-mm-dd')-8/24)*24*60*60*1000)
+	   </if>
+	    <if test="nextExecDateEnd != null and nextExecDateEnd != ''"> 
+	        <![CDATA[ and trgs.next_fire_time<=to_number((to_date(#{nextExecDateEnd},'yyyy-mm-dd hh24:mi:ss')-to_date('1970-01-01','yyyy-mm-dd')-8/24)*24*60*60*1000)]]>
+	   </if>
+	   	order by jobs.job_name
+	</sql>
+	
+	<select id="querySchedulerJobCount" resultType="java.lang.Integer" parameterType="schedulerJobVO">
+		select
+		  count(*) as COUNT_RESULTS
+		 <include refid="querySchedulerJobWhere" />
+	</select>
+	
+	<select id="querySchedulerJobForPage" resultMap="schedulerJobMap" parameterType="schedulerJobVO">
+		<include refid="pageBefore" />
+		<include refid="querySchedulerJobPagSql" />
+		<include refid="pageAfter" />
+	</select>
+		
+	<sql id="pageBefore">
+		SELECT * FROM ( SELECT innerTable.*,ROWNUM rn FROM (
+	</sql>
+	<sql id="pageAfter">
+		<![CDATA[ ) innerTable WHERE ROWNUM <=#{end} ) outerTable WHERE outerTable.rn >=#{start} ]]>
+	</sql>
+	
+	
+	
+	<insert id="saveOperateLog" parameterType="operateLogVo">
+		<selectKey keyProperty="logId"  order="BEFORE"  resultType="java.lang.Integer">
+	       		select OPERATE_LOG_ID_SEQ.nextval as logId from dual
+	    </selectKey>
+	    insert into cs_job_operate_log (LOG_ID,AGENT_ID,AGENT_NAME,LOG_STATUS,CREATE_TIME,REMARK,JOB_ID) values
+	    (#{logId},#{agentId},#{agentName},#{logStatus},sysdate,#{remark},#{jobId})
+	</insert>
+	
+	
+	
+	<sql id="queryJobInfoPagSql">
+		select jobinfo.job_id as jobId,
+			   jobinfo.job_name as jobName,
+			   jobinfo.job_group as jobGroup
+         <include refid="queryJobInfoWhere" />
+	</sql>
+	<sql id="queryJobInfoWhere">
+		from cs_job_info jobinfo
+		<where>
+			<if test="jobId != null and jobId != ''"> 
+	             jobinfo.job_id=#{jobId}
+	        </if>
+	        <if test="jobName != null and jobName != ''"> 
+	             and jobinfo.job_name=#{jobName}
+	        </if>
+	        <if test="jobGroup != null and jobGroup != ''"> 
+	             and jobinfo.job_group=#{jobGroup}
+	        </if>
+		</where>
+		order by jobinfo.create_time desc
+	</sql>
+	
+	<select id="queryJobInfoCount" resultType="java.lang.Integer" parameterType="jobInfoVo">
+		select
+		  count(*) as COUNT_RESULTS
+		 <include refid="queryJobInfoWhere" />
+	</select>
+	
+	<select id="queryJobInfoForPage" resultMap="jobInfoVoMap" parameterType="jobInfoVo">
+		<include refid="pageBefore" />
+		<include refid="queryJobInfoPagSql" />
+		<include refid="pageAfter" />
+	</select>
+	<insert id="saveJobInfo" parameterType="jobInfoVo">
+		<selectKey keyProperty="jobId"  order="BEFORE"  resultType="java.lang.Integer">
+	       		select JOB_INFO_ID_SEQ.nextval as jobId from dual
+		</selectKey>
+		insert into cs_job_info(
+			JOB_ID,
+			JOB_NAME,
+			JOB_GROUP,
+			CREATE_TIME,
+			CREATE_AGENT_ID,
+			CREATE_AGENT_NAME
+		)
+		values(
+			#{jobId},
+			#{jobName},
+			#{jobGroup},
+			sysdate,
+			#{createAgentId},
+			#{createAgentName}
+		)
+	</insert>
+
+	
+	<sql id="queryJobLogPagSql">
+		select joblog.log_id as logId,
+			   joblog.agent_id as agentId,
+			   joblog.agent_name as agentName,
+			   joblog.log_status as logStatus,
+			   to_char(joblog.create_time,'yyyy-mm-dd hh24:mi:ss') as createTime,
+			   joblog.remark as remark,
+			   joblog.job_id as jobId
+         <include refid="queryJobLogWhere" />
+	</sql>
+	<sql id="queryJobLogWhere">
+		from cs_job_operate_log joblog
+		where
+		 joblog.job_id=#{jobId}
+		order by joblog.create_time desc
+	</sql>
+	
+	<select id="queryJobLogCount" resultType="java.lang.Integer" parameterType="operateLogVo">
+		select
+		  count(*) as COUNT_RESULTS
+		 <include refid="queryJobLogWhere" />
+	</select>
+	
+	<select id="queryJobLogForPage" resultMap="jobLogVoMap" parameterType="operateLogVo">
+		<include refid="pageBefore" />
+		<include refid="queryJobLogPagSql" />
+		<include refid="pageAfter" />
+	</select>
+	
+	<insert id="saveJobExecLog" parameterType="jobRunLogVo">
+		<selectKey keyProperty="logId"  order="BEFORE"  resultType="java.lang.Integer">
+	       		select JOB_RUN_LOG_ID_SEQ.nextval as logId from dual
+	    </selectKey>
+	    insert into cs_job_run_log (
+	    	LOG_ID,
+	    	JOB_ID
+	    	<if test="execBeginTime != null and execBeginTime != ''">
+	    		,EXEC_BEGIN_TIME
+	    	</if>
+	    	<if test="execEndTime != null and execEndTime != ''">
+	    		,EXEC_END_TIME
+	    	</if>
+	    		,EXEC_STATUS
+    		<if test="errorMessage != null and errorMessage != ''">
+	    		,ERROR_MESSAGE
+	    	</if>
+	    )values(
+	    	#{logId},
+	    	#{jobId}
+	    	<if test="execBeginTime != null and execBeginTime != ''">
+	    		,to_date(#{execBeginTime},'yyyy-mm-dd hh24:mi:ss')
+	    	</if>
+	    	<if test="execEndTime != null and execEndTime != ''">
+	    		,to_date(#{execEndTime},'yyyy-mm-dd hh24:mi:ss')
+	    	</if>
+	    		,#{execStatus}
+	    	<if test="errorMessage != null and errorMessage != ''">
+	    		,#{errorMessage}
+	    	</if>
+	    )
+	</insert>
+	
+	
+	
+	<sql id="queryJobRunningLogPagSql">
+	 select log.log_id as logId,
+	 		log.job_id as jobId,
+	 		to_char(log.exec_begin_time,'yyyy-mm-dd hh24:mi:ss') as execBeginTime,
+	 		to_char(log.exec_end_time,'yyyy-mm-dd hh24:mi:ss') as execEndTime,
+	 		log.exec_status as execStatus,
+	 		log.error_message as errorMessage
+         <include refid="queryJobRunningLogWhere" />
+	</sql>
+	<sql id="queryJobRunningLogWhere">
+		from cs_job_run_log log 
+		where
+		log.job_id=#{jobId}
+		order by log.exec_begin_time desc
+	</sql>
+	
+	<select id="queryJobRunningLogCount" resultType="java.lang.Integer" parameterType="jobRunLogVo">
+		select
+		  count(*) as COUNT_RESULTS
+		 <include refid="queryJobRunningLogWhere" />
+	</select>
+	
+	<select id="queryJobRunningLogForPage" resultMap="jobRunLogVoMap" parameterType="jobRunLogVo">
+		<include refid="pageBefore" />
+		<include refid="queryJobRunningLogPagSql" />
+		<include refid="pageAfter" />
+	</select>
+	<select id="queryJobDataTime" resultType="jobDataTime" parameterType="jobDataTime">
+		select t.job_name jobName,
+       t.job_start_time jobStartTime,
+       t.job_end_time jobEndTime
+from   cs_job_data_time t
+where  t.job_time_status=0 
+<if test="jobName!=null and jobName!=''">
+and t.job_name = #{jobName}
+</if>
+<if test="jobStartTime!=null and jobStartTime!=''">
+and t.job_start_time = #{and t.job_start_time = '1'}
+</if>
+ <if test="jobEndTime!=null and jobEndTime!=''">
+ and t.job_end_time = #{jobEndTime}
+ </if>
+ order by t.job_start_time
+	</select>
+	<select id="queryJobDataTimeDealTimes"  resultType="jobDataTime">
+	select distinct t.job_start_time jobStartTime,
+                t.job_end_time   jobEndTime
+from   cs_job_data_time t
+where  t.job_time_status = 0
+order  by t.job_start_time,
+          t.job_end_time
+	</select>
+	<insert id="insertIobDataTime"  parameterType="jobDataTime">
+	insert into cs_job_data_time
+  (job_name,
+   job_start_time,
+   job_end_time,
+   job_time_status)
+values
+  (#{jobName},
+   #{jobStartTime},
+   #{jobEndTime},
+   0)
+	</insert>
+	<delete id="deleteIobDataTime" parameterType="jobDataTime">
+		delete cs_job_data_time t
+		where  t.job_name = #{jobName}
+       and t.job_start_time = #{jobStartTime}
+       and t.job_end_time = #{jobEndTime}
+       and t.job_time_status = 0
+	</delete>
+</mapper>

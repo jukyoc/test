@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="NotConnectedStatisticsObj">
+	<resultMap id="notConnectedStatisticsMap" type="notConnectedStatisticsObj">
+		 <result property="bussinessId" column="bussiness_id"></result>						     <!-- 业务线id(查询条件)-->
+		 <result property="bussinessName" column="bussiness_name"></result>              		 <!-- 业务组(业务线名称) -->
+		 <result property="telTime" column="tel_time"></result>                      		     <!-- 来电时间-->
+		 <result property="telPhone" column="tel_phone"></result>                      		     <!-- 来电号码-->
+		 <result property="sessionId" column="session_id"></result>                      		     <!-- sessionid-->
+		 <result property="traceId" column="trace_id"></result>                      		     <!-- traceid-->
+		 <result property="agentId" column="agent_id"></result>                      		     <!-- 工号-->
+<!-- 		 <result property="telType" column="tel_type"></result>                      		     来电类型 0 系统挂断 1用户挂断 -->
+	</resultMap>
+	
+		<resultMap id="notConnectedExampleMap" type="notConnectedStatisticsObj">
+		 <result property="sampleId" column="sample_id"></result>						     <!-- 业务线id(查询条件)-->
+		 <result property="sampleTime" column="sample_time"></result>						    
+	</resultMap>
+	
+	<select id="queryNoConnectedStatistics" parameterType="notConnectedStatisticsObj" resultMap="notConnectedStatisticsMap">
+	    <![CDATA[
+	    select business_name   as bussiness_name,
+		       #{bussinessId}  as bussinessId,
+		       s.caller_number tel_phone,
+		       s.begin_time    tel_time,
+		       tt.session_id   session_id,
+               tt.trace_id     trace_id,
+               tt.agent_id     agent_id
+		  from (select business.business_name
+		          from cs_businessinfo business
+		         where business.business_id = #{bussinessId}),
+		       (select traceinfo.trace_id, traceinfo.session_id,traceinfo.agent_id
+		          from cs_call_session_trace_info traceinfo
+		          left join cs_call_session_trace_sample tracesample on tracesample.trace_id =
+		                                                                traceinfo.trace_id
+		                                                            and tracesample.session_id =
+		                                                                traceinfo.session_id
+		                                                            and tracesample.sample_id =
+		                                                                '1007'
+		         where traceinfo.transfer_type <> '4'
+		           and tracesample.trace_id is null
+		           and tracesample.session_id is null
+		           and exists
+		         (select 1
+		                  from cs_call_session_info sessioninfo
+		                 where sessioninfo.session_id = traceinfo.session_id
+		                   and sessioninfo.session_type = '0'
+		                   and sessioninfo.begin_time >=
+		                       to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')
+		                   and sessioninfo.begin_time <=
+		                       to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss'))
+		                       ]]>
+		                       
+		            <if test="bussinessId!=null and bussinessId!=''">
+		            <choose>
+		            <when test="queueId=='all'">
+		            and traceinfo.source_queue_id in
+		                       (select queue_id
+		                          from cs_queueinfo
+		                         where business_id = #{bussinessId})
+		            </when>
+		            <otherwise>
+		            and traceinfo.source_queue_id =#{queueId}
+		            </otherwise>
+		            </choose>
+		            </if>           
+		           <![CDATA[                   
+		                         ) tt,
+		       cs_call_session_info s
+		 where tt.session_id = s.session_id
+		   and s.session_type = 0
+		 order by bussinessId, tel_time
+	    ]]>
+	    
+<!-- 	    select business_name as bussiness_name, -->
+<!-- 		       #{bussinessId} as bussinessId, -->
+<!-- 		       s.caller_number tel_phone, -->
+<!-- 		       s.begin_time tel_time, -->
+<!-- 		       decode(tt.trace_type,0,'坐席挂断',1,'排队用户挂断',2,'到坐席用户挂断',3,'到坐席超时未接') tel_type -->
+<!-- 		  from (select business.business_name -->
+<!-- 		          from cs_businessinfo business -->
+<!-- 		         where business.business_id = #{bussinessId}), -->
+<!-- 		       (select t.session_id, t.trace_id, 0 trace_type -->
+<!-- 		          from (select traceinfo.session_id, -->
+<!-- 		                       traceinfo.trace_id, -->
+<!-- 		                       sam.sample_id zhenling_sample_id, -->
+<!-- 		                       sam.sample_time, -->
+<!-- 		                       lead(sam.sample_id) over(PARTITION BY sam.session_id, sam.trace_id ORDER BY sam.sample_id, sam.sample_time) yida_sample_id -->
+<!-- 		                  from cs_call_session_trace_info   traceinfo, -->
+<!-- 		                       cs_call_session_trace_sample sam -->
+<!-- 		                 where traceinfo.session_id = sam.session_id -->
+<!-- 		                   and traceinfo.trace_id = sam.trace_id -->
+<!-- 		                   and sam.sample_id in (1005, 1007, 1014) -->
+<!-- 		                   and traceinfo.source_queue_id in -->
+<!-- 		                       (select queue_id -->
+<!-- 		                          from cs_queueinfo -->
+<!-- 		                         where business_id = #{bussinessId}) -->
+<!-- 		                   <![CDATA[and sam.sample_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]> -->
+<!-- 		                   <![CDATA[and sam.sample_time <= to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>) t -->
+<!-- 		         where t.zhenling_sample_id = '1005' -->
+<!-- 		           and t.yida_sample_id = '1014' -->
+<!-- 		        union -->
+<!-- 		        select t.session_id, t.trace_id, 1 trace_type -->
+<!-- 		          from (select traceinfo.session_id, -->
+<!-- 		                       traceinfo.trace_id, -->
+<!-- 		                       sam.sample_id paidui_id, -->
+<!-- 		                       sam.sample_time, -->
+<!-- 		                       lead(sam.sample_id) over(PARTITION BY sam.session_id, sam.trace_id ORDER BY sam.sample_id, sam.sample_time) yonghuguaji_id -->
+<!-- 		                  from cs_call_session_trace_info   traceinfo, -->
+<!-- 		                       cs_call_session_trace_sample sam -->
+<!-- 		                 where traceinfo.session_id = sam.session_id -->
+<!-- 		                   and traceinfo.trace_id = sam.trace_id -->
+<!-- 		                   and sam.sample_id in (1001, 1003, 1013) -->
+<!-- 		                   and traceinfo.source_queue_id in -->
+<!-- 		                       (select queue_id -->
+<!-- 		                          from cs_queueinfo -->
+<!-- 		                         where business_id = #{bussinessId}) -->
+<!-- 		                   <![CDATA[and sam.sample_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]> -->
+<!-- 		                   <![CDATA[and sam.sample_time <= to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>) t -->
+<!-- 		         where t.paidui_id = '1001' -->
+<!-- 		          <![CDATA[ and (t.yonghuguaji_id = '1013' or t.yonghuguaji_id is null)]]> -->
+<!-- 		        union -->
+<!-- 		        select t.session_id, t.trace_id, 2 trace_type -->
+<!-- 		          from (select traceinfo.session_id, -->
+<!-- 		                       traceinfo.trace_id, -->
+<!-- 		                       sam.sample_id paidui_id, -->
+<!-- 		                       sam.sample_time, -->
+<!-- 		                       lead(sam.sample_id) over(PARTITION BY sam.session_id, sam.trace_id ORDER BY sam.sample_id, sam.sample_time) yonghuguaji_id -->
+<!-- 		                  from cs_call_session_trace_info   traceinfo, -->
+<!-- 		                       cs_call_session_trace_sample sam -->
+<!-- 		                 where traceinfo.session_id = sam.session_id -->
+<!-- 		                   and traceinfo.trace_id = sam.trace_id -->
+<!-- 		                   and sam.sample_id in (1003, 1007, 1013) -->
+<!-- 		                   and traceinfo.source_queue_id in -->
+<!-- 		                       (select queue_id -->
+<!-- 		                          from cs_queueinfo -->
+<!-- 		                         where business_id = #{bussinessId}) -->
+<!-- 		                   <![CDATA[and sam.sample_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]> -->
+<!-- 		                   <![CDATA[and sam.sample_time <= to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>) t -->
+<!-- 		         where t.paidui_id = '1003' -->
+<!-- 		           and t.yonghuguaji_id = '1013' -->
+<!-- 		        union -->
+<!-- 		        select t.session_id, t.trace_id, 3 trace_type -->
+<!-- 		          from (select traceinfo.session_id, -->
+<!-- 		                       traceinfo.trace_id, -->
+<!-- 		                       sam.sample_id paidui_id, -->
+<!-- 		                       sam.sample_time, -->
+<!-- 		                       lead(sam.sample_id) over(PARTITION BY sam.session_id, sam.trace_id ORDER BY sam.sample_id, sam.sample_time) yonghuguaji_id -->
+<!-- 		                  from cs_call_session_trace_info   traceinfo, -->
+<!-- 		                       cs_call_session_trace_sample sam -->
+<!-- 		                 where traceinfo.session_id = sam.session_id -->
+<!-- 		                   and traceinfo.trace_id = sam.trace_id -->
+<!-- 		                   and sam.sample_id in (1003, 1007, 1016) -->
+<!-- 		                   and traceinfo.source_queue_id in -->
+<!-- 		                       (select queue_id -->
+<!-- 		                          from cs_queueinfo -->
+<!-- 		                         where business_id = #{bussinessId}) -->
+<!-- 		                   <![CDATA[and sam.sample_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]> -->
+<!-- 		                   <![CDATA[and sam.sample_time <= to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>) t -->
+<!-- 		         where t.paidui_id = '1003' -->
+<!-- 		           and t.yonghuguaji_id = '1016') tt, -->
+<!-- 		       cs_call_session_info s -->
+<!-- 		 where tt.session_id = s.session_id -->
+<!-- 		   and s.session_type = 0 -->
+<!-- 		 order by bussinessId, tel_time -->
+	</select>
+	
+	<select id="queryExampleList" parameterType="notConnectedStatisticsObj" resultMap="notConnectedExampleMap">
+	    select t.sample_id,t.sample_time from cs_call_session_trace_sample t where t.trace_id = #{traceId} and t.session_id = #{sessionId} order by t.sample_id
+	</select>
+</mapper>

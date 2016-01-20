@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="autoreport.19e.com" default="releaseok" basedir=".">
+	<property name="WebContent" value="WebContent"/>
+	<property name="classes" value="WebContent/WEB-INF/classes"/>
+	<property name="build" value="build"/>
+	<property name="lib" value="WebContent/WEB-INF/lib/"/>
+	<property name="tomcatHome" value="/app/apache-tomcat-6.0.18-autoreport"/>
+
+	<property name="host.name" value="192.168.64.220"/>
+	<property name="user.name" value="root" />
+	<property name="user.password" value="kaifa4-web" />
+	<property name="tomcat.home" value="/app/apache-tomcat-6.0.18-autoreport"/>
+	<property name="sleep.time" value="10"/>
+	<property name="project.home" value="/app/web"></property>
+
+	<!--项目依赖的第三方jar包路径-->
+	<path id="lib_classpath">
+		<fileset dir="${lib}">
+			<include name="*.jar"/>
+		</fileset>
+		<fileset dir="${tomcatHome}">
+			<include name="**/*.jar"/>
+		</fileset>
+	</path>
+
+	<target name="cleanBuild" description="删除build目">
+		<delete dir="${build}"/>
+		<delete dir="${classes}"/>
+	</target>
+
+	<target name="compile" depends="cleanBuild" description="建立${classes}路径，并编译class文件到${classes}路径下">
+		<mkdir dir="${classes}"/>
+		<!--执行编译-->
+		<javac srcdir="src" destdir="${classes}" encoding="utf-8">
+			<classpath refid="lib_classpath"/>
+		</javac>
+	</target>
+
+	<target name="prepare" depends="compile" description="将Struts、properties...等配置文件拷贝到${classes}路径下">
+		<echo message="prepare start and compile end..."></echo>
+		<!--拷贝所有的xml配置文件-->
+		<copy todir="${classes}">
+			<fileset dir="src">
+				<include name="**/*.xml"/>
+			</fileset>
+		</copy>
+		<!--拷贝所有的属性文件-->
+		<copy todir="${classes}">
+			<fileset dir="src">
+				<include name="**/*.properties"/>
+			</fileset>
+		</copy>
+		<mkdir dir="${build}/${ant.project.name}"/>
+		<!--拷贝所有的文件到build目录-->
+		<copy todir="${build}/${ant.project.name}/">
+			<fileset dir="${WebContent}">
+			</fileset>
+		</copy>
+
+	</target>
+
+	<!-- 打zip包 -->
+	<target name="zipfile" depends="prepare">
+		<echo message="begin zip">
+		</echo>
+		<zip destfile="${build}/${ant.project.name}.zip">
+			<fileset dir="${build}/${ant.project.name}">
+				<include name="**/*.*"/>
+			</fileset>
+		</zip>
+		<echo message="end zip">
+		</echo>
+	</target>
+
+	<!--scp远程copy zip包 -->
+	<target name="copy-tomcat-dist" depends="zipfile">
+		<scp file="${build}/${ant.project.name}.zip" 
+			  trust="true" todir="${user.name}:${user.password}@${host.name}:${project.home}">
+		</scp>
+	</target>
+
+	<!-- 停止tomcat -->
+ 	<target name="remote-tomcat-stop" depends="copy-tomcat-dist">
+ 		<echo message="begin remote-tomcat-stop">
+ 		</echo>
+ 		<sshexec host="${host.name}" username="${user.name}"    
+ 				password="${user.password}" command="${tomcat.home}/bin/killProcess.sh" trust="true" /> 
+ 		<sleep seconds="${sleep.time}" /> 
+ 		<echo message="end remote-tomcat-stop"> 
+ 		</echo> 
+ 	</target> 
+
+	<!-- 解压缩zip包 -->
+ 	<target name="file-unzip" depends="remote-tomcat-stop"> 
+ 		<echo message="begin file-unzip"> 
+ 		</echo> 
+ 		<sshexec host="${host.name}" username="${user.name}" 
+ 				password="${user.password}" command="${tomcat.home}/bin/unzip.sh" trust="true" /> 
+ 		<sleep seconds="${sleep.time}" /> 
+ 		<echo message="end file-unzip"> 
+ 		</echo>
+ 	</target>
+
+	<!-- 启动tomcat -->
+	<target name="remote-tomcat-start" depends="file-unzip">
+		<echo message="begin remote-tomcat-start">
+		</echo>
+		<sshexec host="${host.name}" username="${user.name}"   
+				password="${user.password}" command="${tomcat.home}/bin/tc-startup.sh" trust="true" />
+		<sleep seconds="${sleep.time}" />
+		<echo message="end remote-tomcat-start">
+		</echo>
+	</target>
+	<!-- 工程发布完毕！！！ -->
+	<target name="releaseok" depends="remote-tomcat-start">
+		<echo message="release ${ant.project.name} ok">
+		</echo>
+	</target>
+
+</project>

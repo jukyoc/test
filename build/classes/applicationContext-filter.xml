@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+	<!-- 需实现javax.servlet.Filter接口  -->
+    <bean id="sessionPowerFilter" class="com.speed.ocss.filter.SessionPowerFilter">
+		<property name="watchRequest" value="true"></property>
+		<property name="addKey" value="add"></property>
+		<property name="deleteKey" value="delete"></property>
+		<property name="queryKey" value="query"></property>
+		<property name="updateKey" value="update"></property>
+		<property name="noSessionRedirectUrl" value="/index.jsp"></property>
+		<property name="noPowerRedirectUrl" value="/pages/public/no_power_hint.jsp"></property>
+		<property name="noLoginAccessUrlList">
+			<list>
+			<!-- 
+	      		<value>/pages/login.jsp</value>
+	      		<value>/pages/public/no_power_hint.jsp</value>  -->
+	      		<value>/index.jsp</value>
+	      		<value>/autoreport/schedulerManageAction_toConfigPage.do</value>
+	      		<value>/autoreport/schedulerManageAction_addNewJobPage.do</value>
+	      		<value>/autoreport/schedulerManageAction_queryJobRunLogPage.do</value>
+	      		<value>/autoreport/schedulerManageAction_addJob.do</value>
+	      		<value>/autoreport/schedulerManageAction_checkJobInfo.do</value>
+	      		<value>/autoreport/schedulerManageAction_queryJob.do</value>
+	      		<value>/autoreport/schedulerManageAction_pauseJob.do</value>
+	      		<value>/autoreport/schedulerManageAction_resumeJob.do</value>
+	      		<value>/autoreport/schedulerManageAction_forceRunJob.do</value>
+	      		<value>/autoreport/schedulerManageAction_deleteJob.do</value>
+	      		<value>/autoreport/schedulerManageAction_queryJobLog.do</value>
+	      		<value>/autoreport/schedulerManageAction_queryJobRunningLog.do</value>
+			</list>
+		</property>
+		<property name="noPowerAccessUrlList">
+			<list>
+				<value>/pages/public/no_power_hint.jsp</value>
+				<value>/schedulerManageAction_toConfigPage.do</value>
+			</list>
+		</property>
+	</bean> 
+
+</beans>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="business">
+
+	<resultMap id="businesssMap" type="business">
+	    <result column="BUSINESS_ID"     	 property="businessId"/>
+		<result column="BUSINESS_NAME" 		 property="businessName"/>
+		<result column="BUSINESS_STATUS"     property="businessStatus"/>
+	</resultMap>
+	
+	<select id="queryBusinessEntity"  resultMap="businesssMap" parameterType="business">
+       select business_id ,business_name from cs_businessinfo
+       where business_status = 0
+    </select>
+    
+</mapper>

@@ -1,0 +1,1610 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.speed.autoreport.persion.dao">
+	<resultMap type="persionRecord" id="persionRecordMap">
+		<result column="cs_id" property="csId" jdbcType="VARCHAR" javaType="string"/>
+		<result column="cs_name" property="csName" jdbcType="VARCHAR" javaType="string"/>
+		<result column="business_id" property="businessId" jdbcType="VARCHAR" javaType="string"/>
+		<result column="business_name" property="businessName" jdbcType="VARCHAR" javaType="string"/>
+		<result column="startTime" property="startTime" jdbcType="VARCHAR" javaType="string"/>
+		<result column="endTime" property="endTime" jdbcType="VARCHAR" javaType="string"/>
+		<result column="connect_count" property="connectCount" jdbcType="NUMERIC" javaType="_long"/> <!-- （实际人工）接起量 -->
+		<result column="trans_count" property="transCount" jdbcType="NUMERIC" javaType="_long"/> <!-- 转接量 -->
+		<result column="loose_count" property="looseCount" jdbcType="NUMERIC" javaType="_long"/> <!-- 漏接量  -->
+		<result column="out_bound_call_number" property="outBoundCallNum" jdbcType="NUMERIC" javaType="_long"/> <!-- 外呼量  -->
+		<result column="avg_connect_time" property="avgConnectTime" jdbcType="NUMERIC" javaType="_long"/> <!--  平均通话时长  -->
+		<result column="work_time" property="workTime" jdbcType="NUMERIC" javaType="_long"/> <!--  工作时长  -->
+		<result column="out_time" property="outTime" jdbcType="NUMERIC" javaType="_int"/> <!--  签出次数  -->
+		<result column="rest_count" property="restCount" jdbcType="NUMERIC" javaType="_int"/> <!--  小休次数  -->
+		<result column="keep_time" property="keepTime" jdbcType="NUMERIC" javaType="_long"/> <!--  保持时长  -->
+		<result column="rest_time" property="restTime" jdbcType="NUMERIC" javaType="_long"/> <!--  小休时长  -->
+		<result column="satisfacing_count" property="satisfacingCount" jdbcType="NUMERIC" javaType="_long"/> <!--  评价量  -->
+		<result column="un_statisfacing_count" property="unSatisfacingCount" jdbcType="NUMERIC" javaType="_long"/> <!--  未评价量  -->
+		<result column="good_count" property="goodCount" jdbcType="NUMERIC" javaType="_long"/> <!--  满意量  -->
+		<result column="bad_service_count" property="badServiceCount" jdbcType="NUMERIC" javaType="_long"/> <!--  不满意量（对服务  -->
+		<result column="bad_plan_count" property="badPlanCount" jdbcType="NUMERIC" javaType="_long"/> <!--  不满意量（对方案  -->
+		<result column="bad_count" property="badCount" jdbcType="NUMERIC" javaType="_long"/> <!--  不满意量（全部  -->
+		<result column="general_count" property="generalCount" jdbcType="NUMERIC" javaType="_long"/> <!--  一般评价量  -->
+		<result column="statisfacing_percent" property="saticfacingPercent" jdbcType="VARCHAR" javaType="string"/> <!--  评价率  -->
+		<result column="good_percent" property="goodPercent" jdbcType="VARCHAR" javaType="string"/> <!--  满意度  -->
+		<result column="bad_percent" property="badPercent" jdbcType="VARCHAR" javaType="string"/> <!--  满意度  -->
+
+        <result column="call_alloction" property="callAlloction" jdbcType="VARCHAR" javaType="string"/> <!--  个人来电分配量  -->
+        <result column="trans_out_count" property="transOutCount" jdbcType="VARCHAR" javaType="string"/> <!--  个人转出量  -->
+        <result column="connect_count_in20s" property="connectCountIn20Sec" jdbcType="VARCHAR" javaType="string"/> <!--  个人20s接起量  -->
+	</resultMap>
+	
+	<select id="queryPersionRecord" parameterType="java.util.HashMap" resultMap="persionRecordMap">
+		select #{startTime} as startTime,#{endTime} as endTime,temp.cs_id,agentinfo.cs_name,temp.business_id,businessinfo.business_name,
+  sum(connect_count) as connect_count,
+  sum(trans_count) as trans_count,
+  <!--sum(call_in_count) as call_in_count, -->
+  sum(call_in_count) - sum(connect_count) as loose_count,
+  sum(out_bound_call_number) as out_bound_call_number,
+  <!--sum(sum_connect_time) as sum_connect_time, -->
+  round(decode(sum(connect_count),0,0,sum(sum_connect_time)/sum(connect_count))) as avg_connect_time,
+  sum(work_time) as work_time,
+  sum(rest_time) as rest_time,
+  sum(keep_time) as keep_time,
+  sum(out_time) as out_time,
+  sum(rest_count) as rest_count,
+
+        sum(call_alloction) as call_alloction,
+        sum(trans_out_count) as trans_out_count,
+        sum(connect_count_in20s) as connect_count_in20s,
+
+  sum(satisfacing_count) as satisfacing_count,<!-- 评价量 -->
+  sum(unAppraise_Count) as un_statisfacing_count,
+  sum(good_count) as good_count,
+  sum(bad_service_count) as bad_service_count,
+  sum(bad_plan_count) as bad_plan_count,
+  sum(bad_count) as bad_count,
+  sum(general_count) as general_count,
+
+<![CDATA[  round(case when  (sum(connect_count)-sum(trans_out_count))<=0 then ]]>
+        0
+        else sum(satisfacing_count)/(sum(connect_count)-sum(trans_out_count))*100 end,2) || '%' as statisfacing_percent,<!--评价率 -->
+
+  round(decode(sum(satisfacing_count),0,0,sum(good_count)/sum(satisfacing_count))*100,2) || '%' as good_percent, <!--满意度 -->
+  <!--sum(good_count) as good_count, -->
+  round(decode(sum(satisfacing_count),
+                    0,0,
+                    (sum(bad_service_count)+sum(bad_plan_count)+sum(bad_count))/sum(satisfacing_count))
+                     * 100,2) || '%' as bad_percent
+  
+  
+  
+from (
+select count(*) as connect_count,
+       0 as trans_count,
+       0 as call_in_count,
+       0 as out_bound_call_number,
+       0 as sum_connect_time,
+       0 as work_time,
+       0 as out_time,
+       0 as rest_count,
+       0 as satisfacing_count,    <!-- 满意度评价量 -->
+       0 unAppraise_Count,
+       0 as good_count,   <!-- 满意评价量 -->
+       0 as general_count,   <!-- 一般评价量 -->
+       0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+       0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+       0 as bad_count,    <!-- 两者均不满意评价量 -->
+       0 as rest_time,
+       0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+       agentinfo.cs_id,queue_business.business_id
+          from cs_call_session_trace_info traceinfo 
+          left join cs_call_session_trace_sample tracesample
+                 on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+         left join cs_agentinfo agentinfo on traceinfo.agent_id = agentinfo.cs_id
+         left join (select queueinfo.queue_id,business.business_id,business.business_name 
+         from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+         on traceinfo.source_queue_id = queue_business.queue_id
+         where  traceinfo.transfer_type != '4' and     
+         tracesample.trace_id is not null and 
+         agentinfo.cs_id is not null and 
+         queue_business.business_id is not null 
+         and tracesample.session_id is not null
+                    and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+         and  <![CDATA[ 
+           sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss') 
+         
+         and  
+           sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss') 
+             ]]> 
+         )
+         group by agentinfo.cs_id,agentinfo.cs_name,queue_business.business_id,queue_business.business_name
+        
+         union all
+  
+         select 0 as connect_count ,
+         count(*) as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+         0 as sum_connect_time,
+         0 as work_time,
+         0 as out_time,
+         0 as rest_count,
+         0 as satisfacing_count,    <!-- 满意度评价量 -->
+         0 unAppraise_Count,
+         0 as good_count,   <!-- 满意评价量 -->
+         0 as general_count,   <!-- 一般评价量 -->
+         0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+         0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+         0 as bad_count,    <!-- 两者均不满意评价量 -->
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+         agentinfo.cs_id,queue_business.business_id
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample t
+          on t.sample_id = '1011' and t.session_id=traceinfo.session_id and t.trace_id = traceinfo.trace_id
+          left join cs_call_session_trace_sample tracesample
+          on  tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+          left join cs_agentinfo agentinfo on traceinfo.agent_id = agentinfo.cs_id
+          left join (select queueinfo.queue_id,business.business_id,business.business_name from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+         on traceinfo.target_queue_id = queue_business.queue_id
+         where   traceinfo.transfer_type != '4'  
+         and queue_business.business_id is not null
+         and agentinfo.cs_id is not null
+                 and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+             and   <![CDATA[ 
+             sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss') 
+           
+           and  
+             sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss') 
+               ]]> 
+           )    
+           group by agentinfo.cs_id,agentinfo.cs_name,queue_business.business_id,queue_business.business_name
+           
+           union all
+           
+           select 0 as connect_count,
+                  0 as trans_count,
+           count(*) as call_in_count,
+           0 as out_bound_call_number,
+           0 as sum_connect_time,
+           0 as work_time,
+           0 as out_time,
+           0 as rest_count,
+           0 as satisfacing_count,    <!-- 满意度评价量 -->
+           0 unAppraise_Count,
+         0 as good_count,   <!-- 满意评价量 -->
+         0 as general_count,   <!-- 一般评价量 -->
+         0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+         0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+         0 as bad_count,    <!-- 两者均不满意评价量 -->
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+           agentinfo.cs_id,queue_business.business_id
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample tracesample
+                 on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1003'
+         left join cs_agentinfo agentinfo on traceinfo.agent_id = agentinfo.cs_id
+         left join (select queueinfo.queue_id,business.business_id
+         from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+         on traceinfo.source_queue_id = queue_business.queue_id
+         where    traceinfo.transfer_type != '4' and     
+         tracesample.trace_id is not null and 
+         agentinfo.cs_id is not null
+         and queue_business.business_id is not null
+         and tracesample.session_id is not null
+                    and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+         and  <![CDATA[ 
+           sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss') 
+         
+         and  
+           sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss') 
+             ]]> 
+         )
+         group by agentinfo.cs_id,queue_business.business_id
+   
+        union all
+        
+        select 0 as connect_count ,
+         0 as trans_count,
+         0 as call_in_count,
+         count(*) as out_bound_call_number,
+         0 as sum_connect_time,
+         0 as work_time,
+         0 as out_time,
+         0 as rest_count,
+         0 as satisfacing_count,    <!-- 满意度评价量 -->
+         0 unAppraise_Count,
+         0 as good_count,   <!-- 满意评价量 -->
+         0 as general_count,   <!-- 一般评价量 -->
+         0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+         0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+         0 as bad_count,    <!-- 两者均不满意评价量 -->
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+          b.flow_csid,b.business_id
+            from cs_call_session_trace_sample a,
+                 (
+               select cc.session_id, cc.tract_id, cf.flow_csid,queue_business.business_id,queue_business.business_name
+                 from cs_custom_caseinfo cc, cs_caseflowlog cf,
+                 (select queueinfo.queue_id,business.business_id,business.business_name from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+               where cc.flow_id = cf.flow_id and cf.queue_id = queue_business.queue_id 
+               group by cc.session_id, cc.tract_id, cf.flow_csid,queue_business.business_id,queue_business.business_name
+               ) b
+           where a.sample_id = '1021'
+             and exists ( select 1 from cs_call_session_trace_sample tracesample where tracesample.session_id = a.session_id
+              and tracesample.trace_id = a.trace_id and tracesample.sample_id='1023')
+              and <![CDATA[ 
+                a.sample_time < to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss') 
+              and
+                a.sample_time >= to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') 
+                ]]> 
+             and a.session_id = b.session_id
+             and a.trace_id = b.tract_id
+           group by b.flow_csid,b.business_id
+           
+           union all
+           
+           select 0 as connect_count ,
+         0 as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+          sum(decode(tracesample.sample_id,
+          '1007',
+          decode(ts.sample_id,
+                 '1011', ts.sample_time - tracesample.sample_time,
+                 '1013',
+                 ts.sample_time - tracesample.sample_time,
+                 '1014',
+                 ts.sample_time - tracesample.sample_time,
+                 0),
+          0))*24*60*60 as sum_connect_time,
+          0 as work_time,
+          0 as out_time,
+          0 as rest_count,
+          0 as satisfacing_count,    <!--- 满意度评价量 -->
+          0 unAppraise_Count,
+         0 as good_count,   <!-- 满意评价量 -->
+         0 as general_count,   <!-- 一般评价量 -->
+         0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+         0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+         0 as bad_count,    <!-- 两者均不满意评价量 -->
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+          agentinfo.cs_id,queue_business.business_id
+          from cs_call_session_trace_sample tracesample
+          left join cs_call_session_trace_sample ts on ts.trace_id =
+                                                       tracesample.trace_id and ts.session_id=tracesample.session_id
+          left join cs_call_session_trace_info traceinfo
+          on tracesample.session_id = traceinfo.session_id
+                   and tracesample.trace_id = traceinfo.trace_id
+           left join cs_agentinfo agentinfo on agentinfo.cs_id = traceinfo.agent_id
+           left join (select queueinfo.queue_id,business.business_id
+         from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+         on traceinfo.source_queue_id = queue_business.queue_id 
+         where traceinfo.trace_id is not null and 
+         traceinfo.session_id is not null
+         and agentinfo.cs_id is not null 
+         and not exists 
+         (select 1 
+           from cs_call_session_trace_info ti 
+           where ti.session_id = tracesample.session_id 
+           and ti.trace_id = tracesample.trace_id 
+           and ti.transfer_type='4')
+         and exists
+         (select 1
+                  from cs_call_session_info sessioninfo
+                 where sessioninfo.session_id = tracesample.session_id  and sessioninfo.session_type='0'
+                 <![CDATA[ 
+        and sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss') 
+        and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss') 
+          ]]> 
+         )
+         group by agentinfo.cs_id,queue_business.business_id 
+         
+         union all
+         <!--小休时长 -->
+         select 0 as connect_count ,
+         0 as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+         0 as sum_connect_time,
+         0 as work_time,
+         0 as out_time,
+         0 as rest_count,
+         0 as satisfacing_count,    <!-- 满意度评价量 -->
+         0 unAppraise_Count,
+         0 as good_count,   <!-- 满意评价量 -->
+         0 as general_count,   <!-- 一般评价量 -->
+         0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+         0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+         0 as bad_count,    <!-- 两者均不满意评价量 -->
+         sum(nvl2(b.end_time,b.end_time - b.begin_time,0)) * 24 * 3600 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+         ab.cs_id,ab.business_id
+         from (select t.agent_id,t.begin_time,t.end_time,t.sample_id
+            from (select a.agent_id,
+                    case when a.sample_time > to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') then a.sample_time
+                    else to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') end as begin_time,
+                    a.sample_time as begin_time1,
+                    a.sample_id,
+                    case when (lead(a.sample_time) over(partition by agent_id order by a.sample_time)) > to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                    then to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss') 
+                    else (lead(a.sample_time) over(partition by agent_id order by a.sample_time)) end as end_time,
+                    lead(a.sample_time) over(partition by agent_id order by a.sample_time) as end_time1
+               from cs_agent_process_sample a
+              where a.sample_id in ('4002', '4001', '4005')) t
+               where
+               <![CDATA[
+                  t.begin_time < to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                  and t.begin_time >= to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss')
+                  and t.end_time >= t.begin_time
+                  ]]>) b
+                     left join 
+                 (select distinct agentinfo.cs_id,queueinfo.business_id
+          from cs_agentinfo agentinfo,
+          cs_group_queue gp,
+          cs_queueinfo queueinfo
+          where agentinfo.cs_groupid = gp.group_id
+          and gp.queue_id = queueinfo.queue_id
+          and queueinfo.business_id is not null 
+          ) ab 
+          on ab.cs_id = b.agent_id
+          where b.sample_id = '4001'
+          and ab.business_id is not null
+          group by ab.cs_id,ab.business_id
+         
+         union all
+         <!--工作时长 -->
+         select 0 as connect_count ,
+         0 as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+         0 as sum_connect_time,
+         sum(btemp.end_time - btemp.begin_time)*24*60*60 as work_time,
+         0 as out_time,
+         0 as rest_count,
+         0 as satisfacing_count,    <!-- 满意度评价量 -->
+         0 unAppraise_Count,
+         0 as good_count,   <!-- 满意评价量 -->
+         0 as general_count,   <!-- 一般评价量 -->
+         0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+         0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+         0 as bad_count,    <!-- 两者均不满意评价量 -->
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+         ab.cs_id,ab.business_id
+       from (
+            select t.agent_id,t.begin_time,t.end_time,t.sample_id
+            from (select a.agent_id,
+                    case when a.sample_time > to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') then a.sample_time
+                    else to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') end as begin_time,
+                    a.sample_id,
+                    case when (lead(a.sample_time) over(partition by agent_id order by a.sample_time)) > to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                    then to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss') 
+                    else (lead(a.sample_time) over(partition by agent_id order by a.sample_time)) end as end_time
+               from cs_agent_process_sample a
+              where a.sample_id in ('4002', '4001', '4005')) t
+               where
+               <![CDATA[
+                  t.begin_time < to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                  and t.begin_time >= to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss')
+                  and t.end_time >= t.begin_time
+                  ]]>
+              ) btemp
+             left join 
+                 (select distinct agentinfo.cs_id,queueinfo.business_id
+          from cs_agentinfo agentinfo,
+          cs_group_queue gp,
+          cs_queueinfo queueinfo
+          where agentinfo.cs_groupid = gp.group_id
+          and gp.queue_id = queueinfo.queue_id
+          and queueinfo.business_id is not null 
+          ) ab 
+          on ab.cs_id = btemp.agent_id
+      where btemp.sample_id = '4002'
+        and btemp.end_time is not null
+        and ab.business_id is not null
+      group by ab.cs_id,ab.business_id
+         
+         union all
+         select 0 as connect_count,
+         0 as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+         0 as sum_connect_time,
+         0 as work_time,
+         sum(out_time) as out_time,
+         sum(rest_time) as rest_count,
+         0 as satisfacing_count,    <!-- 满意度评价量 -->
+         0 unAppraise_Count,
+         0 as good_count,   <!-- 满意评价量 -->
+         0 as general_count,   <!-- 一般评价量 -->
+         0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+         0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+         0 as bad_count,    <!-- 两者均不满意评价量 -->
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+        temp.cs_id,temp.business_id
+        from (
+          select ab.cs_id,ab.business_id,
+          decode(aps.sample_id,'4005',1,0) as out_time,
+          decode(aps.sample_id,'4001',1,0) as rest_time
+          from (
+          select distinct agentinfo.cs_id,queueinfo.business_id
+          from cs_agentinfo agentinfo,
+          cs_group_queue gp,
+          cs_queueinfo queueinfo
+          where agentinfo.cs_groupid = gp.group_id
+          and gp.queue_id = queueinfo.queue_id
+          and queueinfo.business_id is not null
+          ) ab,cs_agent_process_sample aps
+          where ab.cs_id = aps.agent_id
+          and aps.sample_id in ('4005','4001')
+          <![CDATA[
+          and aps.sample_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss')
+          and aps.sample_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')
+            ]]> 
+          ) temp
+        group by temp.cs_id,temp.business_id
+        
+        union all
+        
+        <!-- 保持时长 -->
+        select 0 as connect_count,
+         0 as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+         0 as sum_connect_time,
+         0 as work_time,
+         0 as out_time,
+         0 as rest_count,
+         0 as satisfacing_count,    <!-- 满意度评价量 -->
+         0 unAppraise_Count,
+         0 as good_count,   <!-- 满意评价量 -->
+         0 as general_count,   <!-- 一般评价量 -->
+         0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+         0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+         0 as bad_count,    <!-- 两者均不满意评价量 -->
+         0 as rest_time,
+         sum(f.total_time) as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+         g.flow_csid, ab.business_id
+          from (select e.trace_id,
+                       e.session_id,
+                       sum(e.end_time - e.begin_time) * 24 * 3600 total_time
+                  from (select t.trace_id,t.session_id,t.begin_time,t.end_time,t.sample_id
+                       from (select a.trace_id,
+                               a.session_id,
+                               a.sample_id,
+                               case when a.sample_time > to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') then a.sample_time
+                    else to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') end as begin_time,
+                               case when (lead(a.sample_time) over(partition by a.session_id,a.trace_id order by a.sample_time))> to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                    then to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                    else (lead(a.sample_time) over(partition by a.session_id,a.trace_id order by a.sample_time)) end as end_time
+                          from cs_call_session_trace_sample a
+                          where a.sample_id in ('1008', '1009', '1011')
+                          <![CDATA[
+                          ) t where t.begin_time >= to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss')
+                          and t.begin_time < to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                          and t.end_time >= t.begin_time
+                          ]]>
+                           ) e
+                 where e.end_time is not null
+                 and e.sample_id = '1008'
+                 group by e.trace_id, e.session_id) f,
+                 (
+                 select cc.session_id, cc.tract_id, cf.flow_csid
+                   from cs_custom_caseinfo cc, cs_caseflowlog cf
+                 where cc.flow_id = cf.flow_id
+                 group by cc.session_id, cc.tract_id, cf.flow_csid
+                 ) g,
+                 (select distinct agentinfo.cs_id,queueinfo.business_id
+          from cs_agentinfo agentinfo,
+          cs_group_queue gp,
+          cs_queueinfo queueinfo
+          where agentinfo.cs_groupid = gp.group_id
+          and gp.queue_id = queueinfo.queue_id
+          and queueinfo.business_id is not null 
+          ) ab 
+         where f.trace_id = g.tract_id
+           and f.session_id = g.session_id
+           and g.flow_csid = ab.cs_id
+         group by g.flow_csid,ab.business_id
+         
+         
+        union all
+        
+        select 0 as connect_count,
+               0 as trans_count,
+               0 as call_in_count,
+               0 as out_bound_call_number,
+               0 as sum_connect_time,
+               0 as work_time,
+               0 as out_time,
+               0 as rest_count,
+               sum(decode(sessioninfo.user_grade, -1, 0, 1)) as satisfacing_count,    <!-- 满意度评价量 -->
+               sum(decode(sessioninfo.user_grade, -1, 1, 0)) unAppraise_Count,
+               sum(decode(sessioninfo.user_grade, 0, 1, 0)) good_count,   <!-- 满意评价量 -->
+               sum(decode(sessioninfo.user_grade, 1, 1, 0)) general_count,   <!-- 一般评价量 -->
+               sum(decode(sessioninfo.user_grade, 2, 1, 0)) bad_service_count,   <!-- 对服务不满意评价量 -->
+               sum(decode(sessioninfo.user_grade, 3, 1, 0)) bad_plan_count,   <!-- 对方案不满意评价量 -->
+               sum(decode(sessioninfo.user_grade, 4, 1, 0)) bad_count,    <!-- 两者均不满意评价量 -->
+               0 as rest_time,
+               0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+               traceinfo.agent_id,queue_business.business_id
+          from cs_call_session_info sessioninfo
+          left join cs_call_session_trace_info traceinfo
+          on traceinfo.session_id = sessioninfo.session_id
+          and traceinfo.target_queue_id is null
+          left join cs_call_session_trace_sample tracesample
+                 on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+          left join (select queueinfo.queue_id,business.business_id 
+          from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+         on traceinfo.source_queue_id = queue_business.queue_id
+          where sessioninfo.session_type='0' 
+          and traceinfo.agent_id is not null
+          and traceinfo.transfer_type != '4'
+          and queue_business.business_id is not null
+          and tracesample.trace_id is not null
+          and tracesample.session_id is not null
+          and traceinfo.trace_id is not null and traceinfo.session_id is not null 
+          <![CDATA[
+        and
+          sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss') 
+        and
+           sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss') 
+           ]]> 
+           group by traceinfo.agent_id,queue_business.business_id
+
+        union all
+        <!-- 个人分配量 -->
+        select 0 as connect_count,
+        0 as trans_count,
+        0 as call_in_count,
+        0 as out_bound_call_number,
+        0 as sum_connect_time,
+        0 as work_time,
+        0 as out_time,
+        0 as rest_count,
+        0 as satisfacing_count,    <!-- 满意度评价量 -->
+        0 unAppraise_Count,
+        0 as good_count,   <!-- 满意评价量 -->
+        0 as general_count,   <!-- 一般评价量 -->
+        0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+        0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+        0 as bad_count,    <!-- 两者均不满意评价量 -->
+        0 as rest_time,
+        0 as keep_time,
+        count(1) as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+        agentinfo.cs_id,queue_business.business_id
+        from cs_call_session_trace_info traceinfo
+        left join cs_call_session_trace_sample tracesample
+        on tracesample.trace_id = traceinfo.trace_id
+        and tracesample.session_id = traceinfo.session_id
+        and tracesample.sample_id = '1003'
+        left join cs_agentinfo agentinfo on traceinfo.agent_id = agentinfo.cs_id
+        left join (select queueinfo.queue_id,business.business_id,business.business_name
+        from cs_queueinfo queueinfo,
+        cs_businessinfo business
+        where business.business_id = queueinfo.business_id
+        and business.business_status = 0) queue_business
+        on traceinfo.source_queue_id = queue_business.queue_id
+        where  traceinfo.transfer_type != '4' and
+        tracesample.trace_id is not null and
+        agentinfo.cs_id is not null and
+        queue_business.business_id is not null
+        and tracesample.session_id is not null
+        and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+        and  <![CDATA[
+           sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss')
+
+         and
+           sessioninfo.begin_time <  to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')
+             ]]>
+        )
+        group by agentinfo.cs_id,agentinfo.cs_name,queue_business.business_id,queue_business.business_name
+
+
+        union all
+        <!-- 个人转出量 -->
+        select 0 as connect_count,
+        0 as trans_count,
+        0 as call_in_count,
+        0 as out_bound_call_number,
+        0 as sum_connect_time,
+        0 as work_time,
+        0 as out_time,
+        0 as rest_count,
+        0 as satisfacing_count,    <!-- 满意度评价量 -->
+        0 unAppraise_Count,
+        0 as good_count,   <!-- 满意评价量 -->
+        0 as general_count,   <!-- 一般评价量 -->
+        0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+        0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+        0 as bad_count,    <!-- 两者均不满意评价量 -->
+        0 as rest_time,
+        0 as keep_time,
+        0 as call_alloction,
+        count(1) as trans_out_count,
+        0 as connect_count_in20s,
+        agentinfo.cs_id,queue_business.business_id
+        from cs_call_session_trace_info traceinfo
+        left join cs_call_session_trace_sample tracesample
+        on tracesample.trace_id = traceinfo.trace_id
+        and tracesample.session_id = traceinfo.session_id
+        and tracesample.sample_id = '1011'
+        left join cs_agentinfo agentinfo on traceinfo.agent_id = agentinfo.cs_id
+        left join (select queueinfo.queue_id,business.business_id,business.business_name
+        from cs_queueinfo queueinfo,
+        cs_businessinfo business
+        where business.business_id = queueinfo.business_id
+        and business.business_status = 0) queue_business
+        on traceinfo.source_queue_id = queue_business.queue_id
+        where  traceinfo.transfer_type != '4' and
+        tracesample.trace_id is not null and
+        agentinfo.cs_id is not null and
+        queue_business.business_id is not null
+        and tracesample.session_id is not null
+        and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+        and  <![CDATA[
+           sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss')
+
+         and
+           sessioninfo.begin_time <  to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')
+             ]]>
+        )
+        group by agentinfo.cs_id,agentinfo.cs_name,queue_business.business_id,queue_business.business_name
+
+        union all
+        select 0 as connect_count,
+        0 as trans_count,
+        0 as call_in_count,
+        0 as out_bound_call_number,
+        0 as sum_connect_time,
+        0 as work_time,
+        0 as out_time,
+        0 as rest_count,
+        0 as satisfacing_count,    <!-- 满意度评价量 -->
+        0 unAppraise_Count,
+        0 as good_count,   <!-- 满意评价量 -->
+        0 as general_count,   <!-- 一般评价量 -->
+        0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+        0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+        0 as bad_count,    <!-- 两者均不满意评价量 -->
+        0 as rest_time,
+        0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        count(1) as connect_count_in20s,
+        c.cs_id,c.business_id from (
+        select b.cs_id,b.business_id, b.source_queue_id,b.stid,sum(b.time_off) as time_off
+        from (
+        select a.*,decode(a.sample_id,1007,a.sample_time-a.endtime,0)*24*60*60 as time_off
+        from (
+        select ti.source_queue_id,ts.*,
+        agentinfo.cs_id,queue_business.business_id,
+        lag(ts.sample_time)over(partition by ts.session_id order by ts.sample_time) as endTime,ts.session_id||ts.trace_id as stid
+        from cs_call_session_trace_sample ts left join cs_call_session_trace_info ti on ts.session_id = ti.session_id and ts.trace_id = ti.trace_id
+        left join (select queueinfo.queue_id,business.business_id,business.business_name
+        from cs_queueinfo queueinfo,
+        cs_businessinfo business
+        where business.business_id = queueinfo.business_id
+        and business.business_status = 0) queue_business
+        on ti.source_queue_id = queue_business.queue_id
+        left join cs_agentinfo agentinfo on ti.agent_id = agentinfo.cs_id
+        where ts.sample_id in (1001,1007,1011)
+        and ts.trace_id is not null and
+        agentinfo.cs_id is not null and
+        queue_business.business_id is not null
+        and ts.session_id is not null
+        and ti.transfer_type != '4'
+        and exists (select 1
+        from cs_call_session_info sessioninfo
+        where sessioninfo.session_id = ts.session_id and sessioninfo.session_type='0'
+        and  <![CDATA[
+           sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss')
+         and
+           sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')
+             ]]>
+
+        )
+        order by ts.session_id,ts.trace_id,ts.sample_id asc
+        ) a where a.sample_id != 1001
+        ) b
+        group by b.stid,b.source_queue_id, b.cs_id,b.business_id
+        <![CDATA[ having sum(b.time_off) <= 20 ]]>
+        ) c
+        group by c.cs_id,c.business_id
+
+
+		) temp ,cs_agentinfo agentinfo ,cs_businessinfo businessinfo
+		where agentinfo.cs_id = temp.cs_id
+		and temp.cs_id in (select cs_id from cs_agentinfo where cs_groupid in (select group_id from cs_group_queue where queue_id in (select queue_id from cs_queueinfo where business_id = #{businessId})))
+		and businessinfo.business_id = temp.business_id
+		and temp.business_id = #{businessId}
+		group by temp.cs_id,agentinfo.cs_name,temp.business_id,businessinfo.business_name
+		order by temp.business_id,temp.cs_id
+		
+		
+	</select>
+	<select id="queryPersionRecordQueue" parameterType="java.util.HashMap" resultMap="persionRecordMap">
+		select #{startTime} as startTime,#{endTime} as endTime,temp.cs_id,agentinfo.cs_name,temp.business_id,businessinfo.business_name,
+  sum(connect_count) as connect_count,
+  sum(trans_count) as trans_count,
+  <!--sum(call_in_count) as call_in_count, -->
+  sum(call_in_count) - sum(connect_count) as loose_count,
+  sum(out_bound_call_number) as out_bound_call_number,
+  <!--sum(sum_connect_time) as sum_connect_time, -->
+  round(decode(sum(connect_count),0,0,sum(sum_connect_time)/sum(connect_count))) as avg_connect_time,
+  sum(work_time) as work_time,
+  sum(rest_time) as rest_time,
+  sum(keep_time) as keep_time,
+  sum(out_time) as out_time,
+  sum(rest_count) as rest_count,
+
+        sum(call_alloction) as call_alloction,
+        sum(trans_out_count) as trans_out_count,
+        sum(connect_count_in20s) as connect_count_in20s,
+
+  sum(satisfacing_count) as satisfacing_count,<!-- 评价量 -->
+  sum(unAppraise_Count) as un_statisfacing_count,
+  sum(good_count) as good_count,
+  sum(bad_service_count) as bad_service_count,
+  sum(bad_plan_count) as bad_plan_count,
+  sum(bad_count) as bad_count,
+  sum(general_count) as general_count,
+<![CDATA[   round(case when  (sum(connect_count)-sum(trans_out_count))<=0 then ]]>
+        0
+        else sum(satisfacing_count)/(sum(connect_count)-sum(trans_out_count))*100 end,2) || '%' as statisfacing_percent,<!--评价率 -->
+
+  round(decode(sum(satisfacing_count),0,0,sum(good_count)/sum(satisfacing_count))*100,2) || '%' as good_percent, <!--满意度 -->
+  <!--sum(good_count) as good_count, -->
+  round(decode(sum(satisfacing_count),
+                    0,0,
+                    (sum(bad_service_count)+sum(bad_plan_count)+sum(bad_count))/sum(satisfacing_count))
+                     * 100,2) || '%' as bad_percent
+  
+  
+  
+from (
+select count(*) as connect_count,
+       0 as trans_count,
+       0 as call_in_count,
+       0 as out_bound_call_number,
+       0 as sum_connect_time,
+       0 as work_time,
+       0 as out_time,
+       0 as rest_count,
+       0 as satisfacing_count,    <!-- 满意度评价量 -->
+       0 unAppraise_Count,
+       0 as good_count,   <!-- 满意评价量 -->
+       0 as general_count,   <!-- 一般评价量 -->
+       0 as bad_service_count,   <!-- 对服务不满意评价量 -->
+       0 as bad_plan_count,   <!-- 对方案不满意评价量 -->
+       0 as bad_count,    <!-- 两者均不满意评价量 -->
+       0 as rest_time,
+       0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+       agentinfo.cs_id,queue_business.business_id,queue_business.queue_id
+          from cs_call_session_trace_info traceinfo 
+          left join cs_call_session_trace_sample tracesample
+                 on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+         left join cs_agentinfo agentinfo on traceinfo.agent_id = agentinfo.cs_id
+         left join (select queueinfo.queue_id,business.business_id,business.business_name 
+         from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+         on traceinfo.source_queue_id = queue_business.queue_id
+         where  traceinfo.transfer_type != '4' and     
+         tracesample.trace_id is not null and 
+         agentinfo.cs_id is not null and 
+         queue_business.business_id is not null 
+         and tracesample.session_id is not null
+                    and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+         and  <![CDATA[ 
+           sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss') 
+         
+         and  
+           sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss') 
+             ]]> 
+         )
+         group by agentinfo.cs_id,agentinfo.cs_name,queue_business.business_id,queue_business.business_name,queue_business.queue_id
+        
+         union all
+  
+         select 0 as connect_count ,
+         count(*) as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+         0 as sum_connect_time,
+         0 as work_time,
+         0 as out_time,
+         0 as rest_count,
+          <!-- 满意度评价量 -->
+         0 as satisfacing_count,   
+         0 unAppraise_Count,
+         <!-- 满意评价量 -->
+         0 as good_count,  
+         <!-- 一般评价量 --> 
+         0 as general_count, 
+<!--          对服务不满意评价量   -->
+         0 as bad_service_count,   
+<!--           对方案不满意评价量 -->
+         0 as bad_plan_count,  
+<!--           两者均不满意评价量 -->
+         0 as bad_count,   
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+         agentinfo.cs_id,queue_business.business_id,queue_business.queue_id
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample t
+          on t.sample_id = '1011' and t.session_id=traceinfo.session_id and t.trace_id = traceinfo.trace_id
+          left join cs_call_session_trace_sample tracesample
+          on  tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+          left join cs_agentinfo agentinfo on traceinfo.agent_id = agentinfo.cs_id
+          left join (select queueinfo.queue_id,business.business_id,business.business_name from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+         on traceinfo.target_queue_id = queue_business.queue_id
+         where   traceinfo.transfer_type != '4'  
+         and queue_business.business_id is not null
+         and agentinfo.cs_id is not null
+                 and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+             and   <![CDATA[ 
+              sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss')  
+           
+            and  
+              sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')  
+                ]]>  
+           )    
+           group by agentinfo.cs_id,agentinfo.cs_name,queue_business.business_id,queue_business.business_name,queue_business.queue_id
+           
+           union all
+           
+           select 0 as connect_count,
+                  0 as trans_count,
+           count(*) as call_in_count,
+           0 as out_bound_call_number,
+           0 as sum_connect_time,
+           0 as work_time,
+           0 as out_time,
+           0 as rest_count,
+<!--            满意度评价量 -->
+           0 as satisfacing_count,    
+           0 unAppraise_Count,
+<!--            满意评价量 -->
+         0 as good_count,
+<!--           一般评价量    -->
+         0 as general_count,  
+<!--          对服务不满意评价量 -->
+         0 as bad_service_count,   
+<!--           对方案不满意评价量 -->
+         0 as bad_plan_count,  
+<!--          两者均不满意评价量 -->
+         0 as bad_count,    
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+           agentinfo.cs_id,queue_business.business_id,queue_business.queue_id
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample tracesample
+                 on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1003'
+         left join cs_agentinfo agentinfo on traceinfo.agent_id = agentinfo.cs_id
+         left join (select queueinfo.queue_id,business.business_id
+         from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+         on traceinfo.source_queue_id = queue_business.queue_id
+         where    traceinfo.transfer_type != '4' and     
+         tracesample.trace_id is not null and 
+         agentinfo.cs_id is not null
+         and queue_business.business_id is not null
+         and tracesample.session_id is not null
+                    and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+         and  <![CDATA[ 
+            sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss')  
+         
+          and   
+            sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')  
+              ]]>  
+         )
+         group by agentinfo.cs_id,queue_business.business_id,queue_business.queue_id
+   
+        union all
+        
+        select 0 as connect_count ,
+         0 as trans_count,
+         0 as call_in_count,
+         count(*) as out_bound_call_number,
+         0 as sum_connect_time,
+         0 as work_time,
+         0 as out_time,
+         0 as rest_count,
+<!--          满意度评价量 -->
+         0 as satisfacing_count,    
+         
+         0 unAppraise_Count,
+<!--           满意评价量 -->
+         0 as good_count,  
+<!--          一般评价量 -->
+         0 as general_count,   
+<!--           对服务不满意评价量 -->
+         0 as bad_service_count,  
+<!--          对方案不满意评价量 -->
+         0 as bad_plan_count,   
+<!--          两者均不满意评价量 -->
+         0 as bad_count,    
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+          b.flow_csid,b.business_id , b.queue_id
+            from cs_call_session_trace_sample a,
+                 (
+               select cc.session_id, cc.tract_id, cf.flow_csid,queue_business.business_id,queue_business.business_name,queue_business.queue_id
+                 from cs_custom_caseinfo cc, cs_caseflowlog cf,
+                 (select queueinfo.queue_id,business.business_id,business.business_name from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+               where cc.flow_id = cf.flow_id and cf.queue_id = queue_business.queue_id 
+               group by cc.session_id, cc.tract_id, cf.flow_csid,queue_business.business_id,queue_business.business_name,queue_business.queue_id
+               ) b
+           where a.sample_id = '1021'
+             and exists ( select 1 from cs_call_session_trace_sample tracesample where tracesample.session_id = a.session_id
+              and tracesample.trace_id = a.trace_id and tracesample.sample_id='1023')
+              and <![CDATA[ 
+                 a.sample_time < to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')  
+               and 
+                 a.sample_time >= to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss')  
+                 ]]>  
+             and a.session_id = b.session_id
+             and a.trace_id = b.tract_id
+           group by b.flow_csid,b.business_id , b.queue_id
+           
+           union all
+           
+           select 0 as connect_count ,
+         0 as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+          sum(decode(tracesample.sample_id,
+          '1007',
+          decode(ts.sample_id,
+                 '1011', ts.sample_time - tracesample.sample_time,
+                 '1013',
+                 ts.sample_time - tracesample.sample_time,
+                 '1014',
+                 ts.sample_time - tracesample.sample_time,
+                 0),
+          0))*24*60*60 as sum_connect_time,
+          0 as work_time,
+          0 as out_time,
+          0 as rest_count,
+<!--             - 满意度评价量 -->
+          0 as satisfacing_count,  
+          0 unAppraise_Count,
+<!--            满意评价量 -->
+         0 as good_count,  
+<!--           一般评价量 -->
+         0 as general_count,  
+<!--           对服务不满意评价量 -->
+         0 as bad_service_count,  
+<!--          对方案不满意评价量 -->
+         0 as bad_plan_count,   
+<!--          两者均不满意评价量 -->
+         0 as bad_count,    
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+          agentinfo.cs_id,queue_business.business_id,queue_business.queue_id
+          from cs_call_session_trace_sample tracesample
+          left join cs_call_session_trace_sample ts on ts.trace_id =
+                                                       tracesample.trace_id and ts.session_id=tracesample.session_id
+          left join cs_call_session_trace_info traceinfo
+          on tracesample.session_id = traceinfo.session_id
+                   and tracesample.trace_id = traceinfo.trace_id
+           left join cs_agentinfo agentinfo on agentinfo.cs_id = traceinfo.agent_id
+           left join (select queueinfo.queue_id,business.business_id
+         from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+         on traceinfo.source_queue_id = queue_business.queue_id 
+         where traceinfo.trace_id is not null and 
+         traceinfo.session_id is not null
+         and agentinfo.cs_id is not null 
+         and not exists 
+         (select 1 
+           from cs_call_session_trace_info ti 
+           where ti.session_id = tracesample.session_id 
+           and ti.trace_id = tracesample.trace_id 
+           and ti.transfer_type='4')
+         and exists
+         (select 1
+                  from cs_call_session_info sessioninfo
+                 where sessioninfo.session_id = tracesample.session_id  and sessioninfo.session_type='0'
+                 <![CDATA[ 
+         and sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss')  
+         and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')  
+           ]]>  
+         )
+         group by agentinfo.cs_id,queue_business.business_id ,queue_business.queue_id
+         
+         union all
+<!--          小休时长 -->
+         select 0 as connect_count ,
+         0 as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+         0 as sum_connect_time,
+         0 as work_time,
+         0 as out_time,
+         0 as rest_count,
+<!--          满意度评价量 -->
+         0 as satisfacing_count,    
+         0 unAppraise_Count,
+<!--          满意评价量 -->
+         0 as good_count,   
+<!--          一般评价量 -->
+         0 as general_count,   
+<!--          对服务不满意评价量 -->
+         0 as bad_service_count,   
+<!--          对方案不满意评价量 -->
+         0 as bad_plan_count,   
+<!--          两者均不满意评价量 -->
+         0 as bad_count,    
+         sum(nvl2(b.end_time,b.end_time - b.begin_time,0)) * 24 * 3600 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+         ab.cs_id,ab.business_id,ab.queue_id
+         from (select t.agent_id,t.begin_time,t.end_time,t.sample_id
+            from (select a.agent_id,
+                    case when a.sample_time > to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') then a.sample_time
+                    else to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') end as begin_time,
+                    a.sample_time as begin_time1,
+                    a.sample_id,
+                    case when (lead(a.sample_time) over(partition by agent_id order by a.sample_time)) > to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                    then to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss') 
+                    else (lead(a.sample_time) over(partition by agent_id order by a.sample_time)) end as end_time,
+                    lead(a.sample_time) over(partition by agent_id order by a.sample_time) as end_time1
+               from cs_agent_process_sample a
+              where a.sample_id in ('4002', '4001', '4005')) t
+               where
+               <![CDATA[
+                  t.begin_time < to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss') 
+                   and t.begin_time >= to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') 
+                   and t.end_time >= t.begin_time 
+                   ]]>) b 
+                     left join 
+                 (select  agentinfo.cs_id,queueinfo.business_id,queueinfo.queue_id
+          from cs_agentinfo agentinfo,
+          cs_group_queue gp,
+          cs_queueinfo queueinfo
+          where agentinfo.cs_groupid = gp.group_id
+          and gp.queue_id = queueinfo.queue_id
+          and queueinfo.business_id is not null 
+          ) ab 
+          on ab.cs_id = b.agent_id
+          where b.sample_id = '4001'
+          and ab.business_id is not null
+          group by ab.cs_id,ab.business_id,ab.queue_id
+         
+         union all
+<!--          工作时长 -->
+         select 0 as connect_count ,
+         0 as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+         0 as sum_connect_time,
+         sum(btemp.end_time - btemp.begin_time)*24*60*60 as work_time,
+         0 as out_time,
+         0 as rest_count,
+<!--          满意度评价量 -->
+         0 as satisfacing_count,    
+         0 unAppraise_Count,
+<!--          满意评价量 -->
+         0 as good_count,   
+<!--           一般评价量 -->
+         0 as general_count,  
+<!--          对服务不满意评价量 -->
+         0 as bad_service_count,   
+<!--          对方案不满意评价量 -->
+         0 as bad_plan_count,   
+<!--          两者均不满意评价量 -->
+         0 as bad_count,    
+         
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+         ab.cs_id,ab.business_id,ab.queue_id
+       from (
+            select t.agent_id,t.begin_time,t.end_time,t.sample_id
+            from (select a.agent_id,
+                    case when a.sample_time > to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') then a.sample_time
+                    else to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') end as begin_time,
+                    a.sample_id,
+                    case when (lead(a.sample_time) over(partition by agent_id order by a.sample_time)) > to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                    then to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss') 
+                    else (lead(a.sample_time) over(partition by agent_id order by a.sample_time)) end as end_time
+               from cs_agent_process_sample a
+              where a.sample_id in ('4002', '4001', '4005')) t
+               where
+               <![CDATA[
+                   t.begin_time < to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss') 
+                   and t.begin_time >= to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') 
+                   and t.end_time >= t.begin_time 
+                   ]]> 
+              ) btemp
+             left join 
+                 (select  agentinfo.cs_id,queueinfo.business_id, queueinfo.queue_id
+          from cs_agentinfo agentinfo,
+          cs_group_queue gp,
+          cs_queueinfo queueinfo
+          where agentinfo.cs_groupid = gp.group_id
+          and gp.queue_id = queueinfo.queue_id
+          and queueinfo.business_id is not null 
+          ) ab 
+          on ab.cs_id = btemp.agent_id
+      where btemp.sample_id = '4002'
+        and btemp.end_time is not null
+        and ab.business_id is not null
+      group by ab.cs_id,ab.business_id,ab.queue_id
+         
+         union all
+         select 0 as connect_count,
+         0 as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+         0 as sum_connect_time,
+         0 as work_time,
+         sum(out_time) as out_time,
+         sum(rest_time) as rest_count,
+<!--          满意度评价量 -->
+         0 as satisfacing_count,    
+         0 unAppraise_Count,
+<!--          满意评价量 -->
+         0 as good_count,   
+<!--          一般评价量 -->
+         0 as general_count,   
+<!--           对服务不满意评价量 -->
+         0 as bad_service_count,  
+<!--          对方案不满意评价量 -->
+         0 as bad_plan_count,   
+<!--          两者均不满意评价量 -->
+         0 as bad_count,    
+         0 as rest_time,
+         0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+        temp.cs_id,temp.business_id,temp.queue_id
+        from (
+          select ab.cs_id,ab.business_id,
+          decode(aps.sample_id,'4005',1,0) as out_time,
+          decode(aps.sample_id,'4001',1,0) as rest_time
+          ,ab.queue_id
+          from (
+          select  agentinfo.cs_id,queueinfo.business_id, queueinfo.queue_id
+          from cs_agentinfo agentinfo,
+          cs_group_queue gp,
+          cs_queueinfo queueinfo
+          where agentinfo.cs_groupid = gp.group_id
+          and gp.queue_id = queueinfo.queue_id
+          and queueinfo.business_id is not null
+          ) ab,cs_agent_process_sample aps
+          where ab.cs_id = aps.agent_id
+          and aps.sample_id in ('4005','4001')
+          <![CDATA[
+           and aps.sample_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss') 
+           and aps.sample_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss') 
+             ]]>  
+          ) temp
+        group by temp.cs_id,temp.business_id,temp.queue_id
+        
+        union all
+        
+<!--         保持时长 -->
+        select 0 as connect_count,
+         0 as trans_count,
+         0 as call_in_count,
+         0 as out_bound_call_number,
+         0 as sum_connect_time,
+         0 as work_time,
+         0 as out_time,
+         0 as rest_count,
+<!--          满意度评价量 -->
+         0 as satisfacing_count,    
+         0 unAppraise_Count,
+<!--          满意评价量 -->
+         0 as good_count,   
+<!--           一般评价量 -->
+         0 as general_count,  
+<!--          对服务不满意评价量 -->
+         0 as bad_service_count,   
+<!--          对方案不满意评价量 -->
+         0 as bad_plan_count,   
+<!--          两者均不满意评价量 -->
+         0 as bad_count,    
+         0 as rest_time,
+         sum(f.total_time) as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+         g.flow_csid, ab.business_id,ab.queue_id
+          from (select e.trace_id,
+                       e.session_id,
+                       sum(e.end_time - e.begin_time) * 24 * 3600 total_time
+                  from (select t.trace_id,t.session_id,t.begin_time,t.end_time,t.sample_id
+                       from (select a.trace_id,
+                               a.session_id,
+                               a.sample_id,
+                               case when a.sample_time > to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') then a.sample_time
+                    else to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') end as begin_time,
+                               case when (lead(a.sample_time) over(partition by a.session_id,a.trace_id order by a.sample_time))> to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                    then to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')
+                    else (lead(a.sample_time) over(partition by a.session_id,a.trace_id order by a.sample_time)) end as end_time
+                          from cs_call_session_trace_sample a
+                          where a.sample_id in ('1008', '1009', '1011')
+                          <![CDATA[
+                           ) t where t.begin_time >= to_date(#{startTime},'yyyy-MM-dd HH24:mi:ss') 
+                           and t.begin_time < to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss') 
+                           and t.end_time >= t.begin_time 
+                           ]]> 
+                           ) e
+                 where e.end_time is not null
+                 and e.sample_id = '1008'
+                 group by e.trace_id, e.session_id) f,
+                 (
+                 select cc.session_id, cc.tract_id, cf.flow_csid
+                   from cs_custom_caseinfo cc, cs_caseflowlog cf
+                 where cc.flow_id = cf.flow_id
+                 group by cc.session_id, cc.tract_id, cf.flow_csid
+                 ) g,
+                 (select  agentinfo.cs_id,queueinfo.business_id,queueinfo.queue_id
+          from cs_agentinfo agentinfo,
+          cs_group_queue gp,
+          cs_queueinfo queueinfo
+          where agentinfo.cs_groupid = gp.group_id
+          and gp.queue_id = queueinfo.queue_id
+          and queueinfo.business_id is not null 
+          ) ab 
+         where f.trace_id = g.tract_id
+           and f.session_id = g.session_id
+           and g.flow_csid = ab.cs_id
+         group by g.flow_csid,ab.business_id,ab.queue_id
+         
+         
+        union all
+        
+        select 0 as connect_count,
+               0 as trans_count,
+               0 as call_in_count,
+               0 as out_bound_call_number,
+               0 as sum_connect_time,
+               0 as work_time,
+               0 as out_time,
+               0 as rest_count,
+<!--                满意度评价量 -->
+               sum(decode(sessioninfo.user_grade, -1, 0, 1)) as satisfacing_count,    
+               sum(decode(sessioninfo.user_grade, -1, 1, 0)) unAppraise_Count,
+<!--                 满意评价量 -->
+               sum(decode(sessioninfo.user_grade, 0, 1, 0)) good_count,  
+<!--                一般评价量 -->
+               sum(decode(sessioninfo.user_grade, 1, 1, 0)) general_count,   
+<!--                 对服务不满意评价量 -->
+               sum(decode(sessioninfo.user_grade, 2, 1, 0)) bad_service_count,  
+<!--                对方案不满意评价量 -->
+               sum(decode(sessioninfo.user_grade, 3, 1, 0)) bad_plan_count,   
+<!--                两者均不满意评价量 -->
+               sum(decode(sessioninfo.user_grade, 4, 1, 0)) bad_count,    
+               0 as rest_time,
+               0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+               traceinfo.agent_id,queue_business.business_id,queue_business.queue_id
+          from cs_call_session_info sessioninfo
+          left join cs_call_session_trace_info traceinfo
+          on traceinfo.session_id = sessioninfo.session_id
+          and traceinfo.target_queue_id is null
+          left join cs_call_session_trace_sample tracesample
+                 on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+          left join (select queueinfo.queue_id,business.business_id 
+          from cs_queueinfo queueinfo, 
+         cs_businessinfo business 
+         where business.business_id = queueinfo.business_id
+         and business.business_status = 0) queue_business
+         on traceinfo.source_queue_id = queue_business.queue_id
+          where sessioninfo.session_type='0' 
+          and traceinfo.agent_id is not null
+          and traceinfo.transfer_type != '4'
+          and queue_business.business_id is not null
+          and tracesample.trace_id is not null
+          and tracesample.session_id is not null
+          and traceinfo.trace_id is not null and traceinfo.session_id is not null 
+          <![CDATA[
+         and 
+           sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss')  
+         and 
+            sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')  
+            ]]>  
+           group by traceinfo.agent_id,queue_business.business_id,queue_business.queue_id
+
+        union all
+<!--         个人分配量 -->
+        select 0 as connect_count,
+        0 as trans_count,
+        0 as call_in_count,
+        0 as out_bound_call_number,
+        0 as sum_connect_time,
+        0 as work_time,
+        0 as out_time,
+        0 as rest_count,
+<!--         满意度评价量 -->
+        0 as satisfacing_count,    
+        0 unAppraise_Count,
+<!--         满意评价量 -->
+        0 as good_count,   
+<!--         一般评价量 -->
+        0 as general_count,   
+<!--         对服务不满意评价量 -->
+        0 as bad_service_count,   
+<!--         对方案不满意评价量 -->
+        0 as bad_plan_count,   
+<!--         两者均不满意评价量 -->
+        0 as bad_count,    
+        0 as rest_time,
+        0 as keep_time,
+        count(1) as call_alloction,
+        0 as trans_out_count,
+        0 as connect_count_in20s,
+        agentinfo.cs_id,queue_business.business_id,queue_business.queue_id
+        from cs_call_session_trace_info traceinfo
+        left join cs_call_session_trace_sample tracesample
+        on tracesample.trace_id = traceinfo.trace_id
+        and tracesample.session_id = traceinfo.session_id
+        and tracesample.sample_id = '1003'
+        left join cs_agentinfo agentinfo on traceinfo.agent_id = agentinfo.cs_id
+        left join (select queueinfo.queue_id,business.business_id,business.business_name
+        from cs_queueinfo queueinfo,
+        cs_businessinfo business
+        where business.business_id = queueinfo.business_id
+        and business.business_status = 0) queue_business
+        on traceinfo.source_queue_id = queue_business.queue_id
+        where  traceinfo.transfer_type != '4' and
+        tracesample.trace_id is not null and
+        agentinfo.cs_id is not null and
+        queue_business.business_id is not null
+        and tracesample.session_id is not null
+        and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+        and  <![CDATA[
+            sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss') 
+
+          and 
+            sessioninfo.begin_time <  to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss') 
+              ]]> 
+        )
+        group by agentinfo.cs_id,agentinfo.cs_name,queue_business.business_id,queue_business.business_name,queue_business.queue_id
+
+
+        union all
+<!--         个人转出量 -->
+        select 0 as connect_count,
+        0 as trans_count,
+        0 as call_in_count,
+        0 as out_bound_call_number,
+        0 as sum_connect_time,
+        0 as work_time,
+        0 as out_time,
+        0 as rest_count,
+<!--          满意度评价量 -->
+        0 as satisfacing_count,   
+        0 unAppraise_Count,
+<!--         满意评价量 -->
+        0 as good_count,   
+<!--         一般评价量 -->
+        0 as general_count,   
+<!--         对服务不满意评价量 -->
+        0 as bad_service_count,   
+<!--         对方案不满意评价量 -->
+        0 as bad_plan_count,   
+<!--         两者均不满意评价量 -->
+        0 as bad_count,    
+        0 as rest_time,
+        0 as keep_time,
+        0 as call_alloction,
+        count(1) as trans_out_count,
+        0 as connect_count_in20s,
+        agentinfo.cs_id,queue_business.business_id,queue_business.queue_id
+        from cs_call_session_trace_info traceinfo
+        left join cs_call_session_trace_sample tracesample
+        on tracesample.trace_id = traceinfo.trace_id
+        and tracesample.session_id = traceinfo.session_id
+        and tracesample.sample_id = '1011'
+        left join cs_agentinfo agentinfo on traceinfo.agent_id = agentinfo.cs_id
+        left join (select queueinfo.queue_id,business.business_id,business.business_name
+        from cs_queueinfo queueinfo,
+        cs_businessinfo business
+        where business.business_id = queueinfo.business_id
+        and business.business_status = 0) queue_business
+        on traceinfo.source_queue_id = queue_business.queue_id
+        where  traceinfo.transfer_type != '4' and
+        tracesample.trace_id is not null and
+        agentinfo.cs_id is not null and
+        queue_business.business_id is not null
+        and tracesample.session_id is not null
+        and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+        and  <![CDATA[
+            sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss') 
+
+          and 
+            sessioninfo.begin_time <  to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss') 
+              ]]> 
+        )
+        group by agentinfo.cs_id,agentinfo.cs_name,queue_business.business_id,queue_business.business_name,queue_business.queue_id
+
+        union all
+        select 0 as connect_count,
+        0 as trans_count,
+        0 as call_in_count,
+        0 as out_bound_call_number,
+        0 as sum_connect_time,
+        0 as work_time,
+        0 as out_time,
+        0 as rest_count,
+<!--         满意度评价量 -->
+        0 as satisfacing_count,    
+        0 unAppraise_Count,
+<!--          满意评价量 -->
+        0 as good_count,  
+<!--         一般评价量 -->
+        0 as general_count,   
+<!--         对服务不满意评价量 -->
+        0 as bad_service_count,   
+<!--          对方案不满意评价量 -->
+        0 as bad_plan_count,  
+<!--         两者均不满意评价量 -->
+        0 as bad_count,    
+        0 as rest_time,
+        0 as keep_time,
+        0 as call_alloction,
+        0 as trans_out_count,
+        count(1) as connect_count_in20s,
+        c.cs_id,c.business_id, c.queue_id   from (
+        select b.cs_id,b.business_id, b.source_queue_id,b.queue_id,b.stid,sum(b.time_off) as time_off
+        from (
+        select a.*,decode(a.sample_id,1007,a.sample_time-a.endtime,0)*24*60*60 as time_off
+        from (
+        select ti.source_queue_id, queue_business.queue_id  ,ts.*,
+        agentinfo.cs_id,queue_business.business_id,
+        lag(ts.sample_time)over(partition by ts.session_id order by ts.sample_time) as endTime,ts.session_id||ts.trace_id as stid
+        from cs_call_session_trace_sample ts left join cs_call_session_trace_info ti on ts.session_id = ti.session_id and ts.trace_id = ti.trace_id
+        left join (select queueinfo.queue_id,business.business_id,business.business_name
+        from cs_queueinfo queueinfo,
+        cs_businessinfo business
+        where business.business_id = queueinfo.business_id
+        and business.business_status = 0) queue_business
+        on ti.source_queue_id = queue_business.queue_id
+        left join cs_agentinfo agentinfo on ti.agent_id = agentinfo.cs_id
+        where ts.sample_id in (1001,1007,1011)
+        and ts.trace_id is not null and
+        agentinfo.cs_id is not null and
+        queue_business.business_id is not null
+        and ts.session_id is not null
+        and ti.transfer_type != '4'
+        and exists (select 1
+        from cs_call_session_info sessioninfo
+        where sessioninfo.session_id = ts.session_id and sessioninfo.session_type='0'
+        and  <![CDATA[
+            sessioninfo.begin_time >= to_date(#{startTime}, 'yyyy-mm-dd hh24:mi:ss')
+          and
+            sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')
+              ]]>
+
+        )
+        order by ts.session_id,ts.trace_id,ts.sample_id asc
+        ) a where a.sample_id != 1001
+        ) b
+        group by b.stid,b.source_queue_id, b.queue_id  , b.cs_id,b.business_id
+        <![CDATA[  having sum(b.time_off) <= 20 ]]>
+        ) c
+        group by c.cs_id,c.business_id, c.queue_id  
+
+
+		) temp ,cs_agentinfo agentinfo ,cs_businessinfo businessinfo,cs_queueinfo    queueinfo_out
+		where agentinfo.cs_id = temp.cs_id
+		and temp.cs_id in (select cs_id from cs_agentinfo where cs_groupid in (select group_id from cs_group_queue where queue_id =#{queueId}))
+		and businessinfo.business_id = temp.business_id
+		and queueinfo_out.queue_id = temp.queue_id
+		and queueinfo_out.business_id=businessinfo.business_id
+		and temp.business_id = #{businessId}
+		and temp.queue_id = #{queueId}
+		group by temp.cs_id,agentinfo.cs_name,temp.business_id,businessinfo.business_name,temp.queue_id
+		order by temp.business_id,temp.cs_id
+		
+		
+	</select>
+	
+	
+</mapper>

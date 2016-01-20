@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper  namespace="com.speed.cscenter.css.statistics.dao.OrderQueryDao">
+	<sql id="orderQueryStatisticsDataSub">
+		from 
+		
+		cs_custom_caseinfo         custom,
+      		 cs_call_session_trace_info tracet,
+      		 
+		cs_caseinfo caseinfo,
+			       cs_caseflowlog flow,
+			       cs_questioncategoryinfo qc,
+			       cs_agentinfo ag,
+			       cs_queueinfo queueinfo,
+			       (select sessioninfo.user_grade,cinfo.case_id from cs_call_session_info sessioninfo,
+				     (select ccc.case_id,ccc.session_id from cs_custom_caseinfo ccc group by ccc.case_id,ccc.session_id) cinfo
+				     <![CDATA[where (sessioninfo.session_type <> 1 ) and cinfo.session_id=sessioninfo.session_id) usergrade]]>
+			 where 
+			  flow.flow_id=custom.flow_id(+)
+			 and custom.tract_id = tracet.trace_id(+)
+   			and custom.session_id = tracet.session_id(+)
+   			
+			and caseinfo.case_id = flow.case_id
+			   and caseinfo.case_id=usergrade.case_id(+)
+			   and caseinfo.last_flow_id = flow.flow_id
+			   and caseinfo.qc_id=qc.qc_id
+			   and flow.flow_csid=ag.cs_id
+			   and caseinfo.case_status in (3,6)
+			   and queueinfo.queue_id = caseinfo.queue_id
+			   and flow.flow_type in (1,6,13,14)
+			   <if test="groupId!=null and groupParentId!=null">
+					and	exists (
+									select 1
+									from cs_group_queue gq
+									where exists
+												(
+												select 1
+												from cs_group chd
+												where
+												chd.group_parent_id = #{groupParentId}
+												and gq.group_id = chd.group_id
+												)
+										  and gq.group_id = ag.CS_GROUPID
+									)
+									
+	        </if>
+	        <if test="groupId!=null">
+					and exists (	
+								select 1
+								from cs_group_queue gq
+								where gq.group_id =#{groupId}
+								and gq.group_id = ag.CS_GROUPID
+					)
+	         </if>
+	         <if test="caseIndex!=null and caseIndex!=''">
+				and caseinfo.case_index= #{caseIndex}
+			</if>
+			<if test="clientOrderNum!=null and clientOrderNum!=''">
+				and	caseinfo.client_order_num = #{clientOrderNum}
+			</if>
+			<if test="queueType!=null and queueType!=''">
+				and queueinfo.queue_type=#{queueType}
+			</if>
+			<if test="qcId!=null ">
+				and qc.qc_id= #{qcId}
+			</if>
+			<if test="caseSourceid!=null">
+				and (qc.qc_id= #{caseSourceid}
+				or exists (select 1
+                from cs_questioncategoryinfo cqi
+                where cqi.qc_parent = #{caseSourceid}
+                and qc.qc_id=cqi.qc_id
+                ))
+			</if>
+			<if test="endTime!=null and endTime!=''">
+			  <![CDATA[ and caseinfo.sub_time<=to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')]]>
+			</if>
+			<if test="beginTime!=null and beginTime!=''">
+			  <![CDATA[ and caseinfo.sub_time>=to_date(#{beginTime},'yyyy-MM-dd HH24:mi:ss') ]]>
+			</if>
+			<if test="userGrade!=null and userGrade!=''">
+				and usergrade.user_grade= #{userGrade}
+			</if>
+			<if test="agentId!=null and agentId!=''">
+				and ag.cs_id= #{agentId}
+			</if>
+	</sql>
+	<sql id="orderQueryStatisticsData">
+		<![CDATA[
+ 		 select  * from(select 
+ 		 	flow.flow_id 
+ 			,caseinfo.case_id  
+ 			,caseinfo.case_index  
+ 			,caseinfo.client_order_num  clientOrderNum
+ 			,caseinfo.case_index callerNumber 
+ 			,qc.qc_name 
+ 			,ag.cs_name csName
+             ,ag.cs_id agentId
+ 			,caseinfo.sub_time subTime
+ 			,flow.end_time finishTime 
+ 			,flow.flow_type 
+ 			,caseinfo.case_remark 
+ 			,(caseinfo.finish_time-caseinfo.sub_time)*60*60*24 orderDeal 
+ 			,(flow.end_time-flow.begin_time)*60*60*24 optTime 
+ 			,queueinfo.queue_type queue_type, 
+      		decode(usergrade.user_grade,0,'满意',1,'一般',2,'对服务态度不满意',3,'对解决方案不满意',4,'二者均不满意',-1,'未评价','无') userGrade
+ 			,row_number() over(partition by caseinfo.case_id order by tracet.begin_time desc) case_num 
+ 			,(tracet.record_end_time-tracet.record_begin_time)*86400  recordTime
+ 			]]> 
+			<include refid="orderQueryStatisticsDataSub"/>
+ 		 ) dtable  where dtable.case_num = 1 order by dtable.finishTime desc nulls last
+	</sql>
+	<select id="orderQueryStatisticsDownload" resultType="orderQueryStatistics" parameterType="orderQueryStatistics">
+		<include refid="orderQueryStatisticsData" />
+	</select>
+	<select id="orderQueryStatisticsTime20" parameterType="orderQueryStatistics" resultType="orderQueryStatistics">
+	select cb.business_id  businessId,
+		cb.business_name businessName,
+       cs.begin_time    callerTime,
+       cc.caller_number callerNumber,
+       cq.queue_id queueId,
+       cs.agent_id      agentId
+from   cs_businessinfo            cb,
+       cs_queueinfo               cq,
+       cs_call_session_info       cc,
+       cs_call_session_trace_info cs
+left   join cs_call_session_trace_sample sa1 on sa1.trace_id = cs.trace_id
+                                                and sa1.session_id =
+                                                cs.session_id
+                                                and sa1.sample_id = '1007'
+left   join cs_call_session_trace_sample sa2 on sa2.trace_id = cs.trace_id
+                                                and sa2.session_id =
+                                                cs.session_id
+                                                and sa2.sample_id = '1001'
+
+where  cs.transfer_type!=4 and
+		cc.session_id = cs.session_id
+       and cc.session_type = 0
+       and cb.business_status = 0
+       and cs.source_queue_id = cq.queue_id
+       and cq.business_id = cb.business_id
+   <![CDATA[    and cs.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd HH24:mi:ss')
+       and cs.begin_time <= to_date(#{endTime}, 'yyyy-mm-dd HH24:mi:ss')
+	 	and (sa1.sample_time - sa2.sample_time) > 20/ 86400]]> 
+	</select>
+	
+	
+	
+</mapper>

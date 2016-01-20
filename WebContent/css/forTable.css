@@ -1,0 +1,82 @@
+/*--ȫ����--*/
+*{margin:0; padding:0;}
+
+body{background:#dfe8f7; font-size:12px; font-family:Arial, "����"; color:#333;}
+img{border:none;}
+
+/*--������--*/
+.center{text-align:center;}
+.bold{font-weight:bold;}
+.red{color:red;}
+.lightBlue{color:#becbff;}
+.white{color:#fff;}
+.font14{font-size:14px;}
+.textInput{background:url(/csorder/images/inputBg.gif) top repeat-x #fff; border:1px solid #b3b9c5; padding-left:5px; color:#333; font-size:12px; font-family:Arial;}
+.btn1, .btn2, .btn3, .btn4{text-align:center; color:#fff; border:none; cursor:pointer; font-weight:bold;}
+.btn1{width:80px; height:25px; line-height:25px; background:url(/csorder/images/btn1.gif) no-repeat;}
+.btn2{width:26px; height:25px; line-height:25px; background:url(/csorder/images/btn2.gif) no-repeat;}
+.btn3{width:62px; height:24px; line-height:24px; background:url(/csorder/images/topbtn.gif) no-repeat; color:#000; font-weight:normal;}
+.btn4{width:50px; height:22px; line-height:22px; background:url(/csorder/images/btn3.gif) no-repeat; color:#333; font-weight:normal;}
+.padLeft10{padding-left:10px;}
+.padLeft20{padding-left:20px;}
+.padRight10{padding-right:10px;}
+.hidden{display:none;}
+.relative{position:relative;}
+
+a.linkWhite:link{color:#fff; text-decoration:none;}
+a.linkWhite:visited{color:#fff; text-decoration:none;}
+a.linkWhite:hover{color:#fff; text-decoration:underline;}
+
+a.linkLightBlue:link{color:#bfccff; text-decoration:none;}
+a.linkLightBlue:visited{color:#bfccff; text-decoration:none;}
+a.linkLightBlue:hover{color:#bfccff; text-decoration:underline;}
+
+a.linkGray:link{color:#333; text-decoration:none;}
+a.linkGray:visited{color:#333; text-decoration:none;}
+a.linkGray:hover{color:#333; text-decoration:underline;}
+
+
+/*--Ԫ��--*/
+
+
+#headerWrap{width:100%; float:left; height:133px;}
+#header{width:100%; float:left; height:80px; background:url(/csorder/images/headBg.gif) left repeat-y #665aa6; color:#bfccff;}
+#navBg{width:100%; float:left; height:63px; background:url(/csorder/images/navBg.gif) left repeat-x;}
+
+.logo{width:150px; height:30px; background:url(/csorder/images/logo.gif) no-repeat; float:left;}
+.topHint{height:36px; line-height:36px; padding-right:20px; background:url(/csorder/images/topHint.gif) top right;}
+.topHint .topHintLeft{width:20px; height:36px; float:left; background:url(/csorder/images/topHint.gif) top left;}
+.iconsTable{color:#fff; text-decoration:none;}
+.iconsTable img{vertical-align:middle;}
+.iconsTable a{color:#fff; text-decoration:none;}
+
+
+.tableStyle1{border:1px solid #b3bccb; border-collapse:collapse;}
+.tableStyle1 td{border:1px solid #b3bccb; padding:5px;}
+.tableStyle1 td.text-right{border:1px solid #b3bccb; padding:5px;text-align: right}
+
+.tableStyle2{border:1px solid #ccc; border-collapse:collapse; background:#f6f6f6;}
+.tableStyle2 td{border:1px solid #ccc; padding:5px;}
+
+.titleBg1{background:url(/csorder/images/titleBg.gif) top repeat-x #f1f4f6; color:#2c4375; height:40px;}
+.titleBg2{background:#f1f4f6; color:#2c4375;}
+.titleBg3{background:url(/csorder/images/titleBg2.gif) top repeat-x #e1e1e1; color:#333; height:40px;}
+
+.tagDiv{width:100%; float:left; height:25px; line-height:25px;}
+.tagDiv ul{list-style-type:none; width:100%; height:25px;}
+.tagDiv li{width:70px; text-align:center; line-height:25px; background:url(/csorder/images/tagBg.gif) left bottom no-repeat; float:left; margin-right:5px; display:inline;}
+.tagDiv li a{color:#666; text-decoration:none;}
+.tagDiv li a.currentTag{width:70px; text-align:center; height:25px; line-height:25px; background:url(/csorder/images/tagBg.gif) left top no-repeat; color:#413e6b; display:block;}
+
+.floatHint{width:19px; text-align:center; height:19px; line-height:19px; background:url(/csorder/images/redHint.png); z-index:1; position:absolute; top:-12px; right:-10px;}
+.floatHint a{color:#fff000; text-decoration:none;}
+
+.navText{padding:0 20px; font-family:"΢���ź�"; font-size:14px; color:#333; font-weight:bold; width:95%; height:30px; line-height:30px; overflow:hidden;}
+.navText a:link{color:#333; text-decoration:none; padding-right:10px;}
+.navText a:visited{color:#333; text-decoration:none;}
+.navText a:hover{color:#888; text-decoration:none;}
+.navText a.navTextCurrent{color:red; text-decoration:none;}
+
+.returnCorrect, .returnFail{width:80%; height:100px; line-height:100px; padding-left:200px; float:left; color:#333; font-size:14px; font-weight:bold; margin-top:100px;}
+.returnCorrect{background:url(/csorder/images/iconTick.png) 100px 0px no-repeat;}
+.returnFail{background:url(/csorder/images/iconCross.png) 100px 0px no-repeat;}

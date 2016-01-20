@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+	<!-- 综合 -->
+<!-- 	<bean id="quartzJob" class="com.speed.autoreport.quartz.CallAllStatisticsJob" autowire="byName"> -->
+<!-- 	</bean> -->
+	<!-- 每天 -->
+<!-- 	<bean id="jobTaskDay" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean"> -->
+<!-- 		<property name="targetObject"><ref bean="quartzJob"/></property> -->
+<!-- 		<property name="targetMethod"><value>createExcelForDay</value></property> -->
+<!-- 	</bean> -->
+<!-- 	<bean id="cronTriggerDay" class="org.springframework.scheduling.quartz.CronTriggerBean"> -->
+<!-- 		<property name="jobDetail"><ref bean="jobTaskDay"/></property> -->
+<!-- 		<property name="cronExpression"><value>0 0 2 * * ?</value></property> -->
+<!-- 	</bean> -->
+	<!-- 每月 -->
+<!-- 	<bean id="jobTaskMonth" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean"> -->
+<!-- 		<property name="targetObject"><ref bean="quartzJob"/></property> -->
+<!-- 		<property name="targetMethod"><value>createExcelForMonth</value></property> -->
+<!-- 	</bean> -->
+<!-- 	<bean id="cronTriggerMonth" class="org.springframework.scheduling.quartz.CronTriggerBean"> -->
+<!-- 		<property name="jobDetail"><ref bean="jobTaskMonth"/></property> -->
+<!-- 		<property name="cronExpression"><value>0 0 2 1 * ?</value></property> -->
+<!-- 	</bean> -->
+	
+	<!-- 个人 -->
+<!-- 	<bean id="persionTask" class="com.speed.autoreport.persion.task.PersionTask" autowire="byName"> -->
+<!-- 	</bean> -->
+	<!-- 每天 -->
+<!-- 	<bean id="persionTaskDay" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean"> -->
+<!-- 		<property name="targetObject"><ref bean="persionTask"/></property> -->
+<!-- 		<property name="targetMethod"><value>startForDay</value></property> -->
+<!-- 	</bean> -->
+<!-- 	<bean id="cronPersionTaskDay" class="org.springframework.scheduling.quartz.CronTriggerBean"> -->
+<!-- 		<property name="jobDetail"><ref bean="persionTaskDay"/></property> -->
+<!-- 		<property name="cronExpression"><value>0 0 2 * * ?</value></property> -->
+<!-- 	</bean> -->
+	<!-- 每月 -->
+<!-- 	<bean id="persionTaskMonth" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean"> -->
+<!-- 		<property name="targetObject"><ref bean="persionTask"/></property> -->
+<!-- 		<property name="targetMethod"><value>startForMonth</value></property> -->
+<!-- 	</bean> -->
+<!-- 	<bean id="cronPersionTaskMonth" class="org.springframework.scheduling.quartz.CronTriggerBean"> -->
+<!-- 		<property name="jobDetail"><ref bean="persionTaskMonth"/></property> -->
+<!-- 		<property name="cronExpression"><value>0 0 2 1 * ?</value></property> -->
+<!-- 	</bean> -->
+	
+	
+	<!-- 所有的定时任务 -->
+<!-- 	<bean autowire="no" class="org.springframework.scheduling.quartz.SchedulerFactoryBean" lazy-init="false"> -->
+<!-- 		<property name="triggers"> -->
+<!-- 			<list> -->
+<!-- 				<ref local="cronTriggerDay"/> -->
+<!-- 				<ref local="cronTriggerMonth"/> -->
+				
+<!-- 				<ref local="cronPersionTaskDay"/> -->
+<!-- 				<ref local="cronPersionTaskMonth"/> -->
+<!-- 			</list> -->
+<!-- 		</property> -->
+<!-- 	</bean> -->
+	
+	<bean id="quartzScheduler" class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+        <property name="dataSource" ref ="quartz_task_ds" />       
+        <property name="applicationContextSchedulerContextKey" value="applicationContextKey"/>
+        <property name="configLocation" value="classpath:quartz.properties"/>
+    </bean>
+</beans>

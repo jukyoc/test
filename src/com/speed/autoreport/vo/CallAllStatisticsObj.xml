@@ -1,0 +1,681 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="CallAllStatisticsObj">
+	<resultMap id="callAllStatisticsMap" type="callAllStatisticsObj">
+		 <result property="bussinessId" column="bussiness_id"></result>						     <!-- 业务线id(查询条件)-->
+		 <result property="bussinessName" column="bussiness_name"></result>              		 <!-- 业务组(业务线名称) -->
+		 <result property="beginTime" column="begin_time"></result>                      		 <!-- 开始时间(查询条件)-->
+		 <result property="endTime" column="end_time"></result>                          		 <!-- 结束时间(查询条件)-->
+		 <result property="sysAllCallInCount" column="sys_all_call_in_count"></result>   		 <!-- 服务总请求量 (系统接入量)-->
+		 <result property="autoQueryCount" column="auto_query_count"></result>           		 <!-- IVR自助服务数量-->
+		 <result property="loseCount" column="lose_Count"></result>                      		 <!-- IVR放弃数量-->
+		 <result property="autoServicePercent" column="auto_service_percent"></result>   		 <!-- IVR自助服务占比   = IVR自助服务数量/服务总请求量-->
+		 <result property="callInCount" column="call_in_count"></result>                 		 <!-- 人工请求量-->
+		 <result property="connectCount" column="connect_count"></result>                		 <!-- 实际人工接起数量-->
+		 <result property="transOutCount" column="trans_out_count"/>  							 <!-- 转出量 -->
+		 <result property="connectCountIn20s" column="connect_Count_In20s"></result>     		 <!-- 20秒内接起数量-->
+		 <result property="unConnectCount" column="un_Connect_Count"></result>           		 <!-- 人工队列放弃数量-->
+		 <result property="unConnectCountIn20s" column="un_Connect_Count_In20s"></result>		 <!-- 20秒内放弃数量-->
+		 <result property="srvsPcntIn20s" column="srvs_Pcnt_In20s"></result>             		 <!-- 20秒服务水平(公式=20秒内接起数量/实际人工接起数量)-->
+		 <result property="avgConnectTime" column="avg_Connect_Time"></result>           		 <!-- 平均通话时长(公式=人工接起总通话时长/人工坐席接起总量)-->
+		 <result property="maxWaitTime" column="max_Wait_Time"></result>                 		 <!-- 通话排队最长时长-->
+		 <result property="avgWaitTime" column="avg_Wait_Time"></result>                 		 <!-- 通话排队等待平均时长(公式=用户等待总时长/用户等待总数)-->
+		 <result property="maxWaitTimeOfLose" column="max_Wait_TimeOfLose"></result>     		 <!-- 呼损排队最长时长-->
+		 <result property="avgWaitTimeOfLose" column="avg_Wait_TimeOfLose"></result>     		 <!-- 呼损排队等待平均时长-->
+		 <result property="transCount" column="trans_Count"></result>                    		 <!-- 转接量-->
+		 <result property="callOutCount" column="callOut_Count"></result>                		 <!-- 外呼量 -->
+		 <result property="reCallinCount" column="reCallin_Count"></result>              		 <!-- 重复来电量 -->
+		 <result property="appraiseCount" column="appraise_Count"></result>              		 <!-- 评价量 -->
+		 <result property="goodCount" column="good_count"></result>              		 <!-- 评价量 -->
+		 <result property="unAppraiseCount" column="unAppraise_Count"></result>          		 <!-- 未评价-->
+		 <result property="badServiceCount" column="badService_Count"></result>          		 <!-- 对服务态度不满意-->
+		 <result property="badPlanCount" column="badPlan_Count"></result>                		 <!-- 对解决方案不满意-->
+		 <result property="badCount" column="bad_Count"></result>                        		 <!-- 双不满意-->
+		 <result property="generalCount" column="general_Count"></result>                		 <!-- 一般-->
+		 <result property="appraisePercent" column="appraise_Percent"></result>          		 <!-- 评价率 -->
+		 <result property="goodPercent" column="good_Percent"></result>                  		 <!-- 满意率-->
+		 <result property="badAppraisePercent" column="badAppraise_Percent"></result>    		 <!-- 差评率  -->
+	</resultMap>
+	
+	<select id="queryCallAllStatistics" parameterType="callAllStatisticsObj" resultMap="callAllStatisticsMap">
+	select 
+		business_name as bussiness_name,
+		#{beginTime} as begin_time,
+       	#{endTime} as end_time,
+       	#{bussinessId} as bussinessId
+		,sys_call_in_count+auto_query_count+lose_count as sys_all_call_in_count
+		,auto_query_count
+		,lose_Count
+		, round(decode(sys_call_in_count+auto_query_count+lose_count,0,0,auto_query_count/(sys_call_in_count+auto_query_count+lose_count)
+			) *100,2
+		) || '%' as auto_service_percent
+		,call_in_count
+		,connect_count
+		,nvl(trans_out_count,0) trans_out_count
+		,connect_Count_In20s
+		,un_Connect_Count
+		,un_Connect_Count_In20s
+		,round(decode(connect_count,0,0,connect_Count_In20s/connect_count)*100,2)||'%' as srvs_Pcnt_In20s
+		, F_Time_Str_0(decode(connect_count,
+                         0,
+                         0,
+                         sum_connect_time / connect_count)) as avg_Connect_Time
+		,case when max_wait_time>max_uncount_wait_time then F_Time_Str_0(max_wait_time) else F_Time_Str_0(max_uncount_wait_time) end as max_Wait_Time
+		,F_Time_Str_0(decode(call_in_count, 0, 0, (sum_wait_time+sum_un_connect_wait_time) / call_in_count))  as avg_Wait_Time
+		,F_Time_Str_0(max_Wait_TimeOfLose) as max_Wait_TimeOfLose
+		,F_Time_Str_0(decode(un_conn_count_1013, 0, 0, (sum_Wait_TimeOfLose) / un_conn_count_1013)) as avg_Wait_TimeOfLose
+		,trans_Count
+		,callOut_Count
+		,reCallin_Count
+		
+		, nvl(satisfacing_count,0) as appraise_Count
+		,nvl(unAppraise_Count,0) as unAppraise_Count
+		,nvl(bad_service_count,0) as badService_Count
+		,nvl(bad_plan_count,0) as badPlan_Count
+		,nvl(bad_Count,0) as bad_Count
+		,nvl(general_Count,0) as general_Count
+		,nvl(good_count,0) as good_count
+		,round(decode(nvl(connect_count,0),0,0,nvl(trans_out_count,0),0,(satisfacing_count/(connect_count-trans_out_count)))*100,2) || '%' as appraise_Percent
+		,round(decode(nvl(satisfacing_count,0),0,0,(good_count/satisfacing_count))*100,2) || '%' as good_Percent
+		,round(decode(nvl(satisfacing_count,0),0,0,((bad_service_count+bad_plan_count+bad_Count)/satisfacing_count))*100,2) || '%' as badAppraise_Percent
+	from
+	<!-- 业务组 -->
+	(
+		select business.business_name from cs_businessinfo business where business.business_id=#{bussinessId}
+	)
+	<!-- 服务总请求量	 -->
+	,(
+		select count(1) as sys_call_in_count
+         from cs_call_session_trace_info traceinfo
+       where <![CDATA[traceinfo.transfer_type<>'4' and ]]> exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+         <![CDATA[and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+         <![CDATA[and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss'))]]>
+	)
+	<!-- IVR自助服务数量	 -->
+	,(
+		select count(1) as auto_query_count
+	        from cs_call_session_trace_sample tracesample
+	        where tracesample.sample_id = '3001'
+          	<if test="beginTime != '' and beginTime != null">
+         	<![CDATA[ and tracesample.sample_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+	        </if>
+        	<if test="endTime != '' and endTime != null">
+	         <![CDATA[and tracesample.sample_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+	        </if>
+	)
+	<!-- IVR放弃数量	 -->
+	,(
+         select nvl(sum(nvl(trac.countt, 0)),0) as lose_Count
+		  from cs_call_session_trace_sample tracesample,
+		       (select 1 as countt, tracesamples.session_id seid
+		          from cs_call_session_trace_sample tracesamples
+		         group by tracesamples.session_id
+		        having count(*) = 1) trac
+		 where tracesample.session_id = trac.seid(+)
+		   and tracesample.sample_id = '1000'
+         	<if test="beginTime != '' and beginTime != null">
+        	<![CDATA[ and tracesample.sample_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+       		</if>
+       		<if test="endTime != '' and endTime != null">
+      		  <![CDATA[and  tracesample.sample_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        	</if>
+	)
+	<!-- 人工请求量	 -->
+	,(
+		select count(*) as call_in_count
+         from cs_call_session_trace_info traceinfo
+       where <![CDATA[traceinfo.transfer_type<>'4' and ]]>  exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+        <if test="beginTime != '' and beginTime != null">
+         <![CDATA[and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        </if>
+        <if test="endTime != '' and endTime != null">
+         <![CDATA[ and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        </if>)
+	    <if test="bussinessId != '' and bussinessId != null">
+	    <choose>
+	    	<when test="queueId==null or queueId=='all'">
+	    		and traceinfo.source_queue_id in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+	    	</when>
+	    	<otherwise>
+	    		and traceinfo.source_queue_id =#{queueId}
+	    	</otherwise>
+	    </choose>
+		 </if>
+	)<!-- 实际人工接起数量	 -->
+	,(
+		select count(1) as connect_count
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample tracesample
+                 on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+         where  <![CDATA[ traceinfo.transfer_type<>'4' and  ]]>  
+         tracesample.trace_id is not null
+         and tracesample.session_id is not null
+                    and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+        <if test="beginTime != '' and beginTime != null">
+         <![CDATA[ and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        </if>
+        <if test="endTime != '' and endTime != null">
+         <![CDATA[ and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        </if>)
+		<if test="bussinessId != '' and bussinessId != null">
+			<choose>
+		    	<when test="queueId==null or queueId=='all'">
+		    		and traceinfo.source_queue_id in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		and traceinfo.source_queue_id =#{queueId}
+		    	</otherwise>
+		    </choose>
+		</if>
+	),
+	 <!-- 转出量 --> 
+    (select count(*) as trans_out_count
+     from cs_call_session_trace_info traceinfo
+     join cs_call_session_trace_sample t
+     on t.sample_id = '1011' and t.session_id=traceinfo.session_id and t.trace_id = traceinfo.trace_id
+    where <![CDATA[ traceinfo.transfer_type<>'4' ]]>
+            and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+    <if test="beginTime != '' and beginTime != null">
+    	<![CDATA[ and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+    </if>
+    <if test="endTime != '' and endTime != null">
+     <![CDATA[ and sessioninfo.begin_time <= to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+    </if>)         
+     <if test="bussinessId != '' and bussinessId != null">
+     	<choose>
+		    	<when test="queueId==null or queueId=='all'">
+		    		and traceinfo.source_queue_id in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		and traceinfo.source_queue_id =#{queueId}
+		    	</otherwise>
+		    </choose>
+      </if>          
+      )
+	<!-- 20秒内接起数量	 -->
+	,(
+       select count(1) as connect_Count_In20s
+		from (select b.source_queue_id, b.stid, sum(b.time_off) as time_off
+          from (select a.*,
+                       decode(a.sample_id, 1007, a.sample_time - a.endtime, 0) * 24 * 60 * 60 as time_off
+                  from (select ti.source_queue_id,
+                               ts.*,
+                               lag(ts.sample_time) over(partition by ts.session_id order by ts.sample_time) as endTime,
+                               ts.session_id || ts.trace_id as stid
+                          from cs_call_session_trace_sample ts
+                          left join cs_call_session_trace_info ti on ts.session_id = ti.session_id and ts.trace_id = ti.trace_id
+                         where ts.sample_id in (1001, 1007, 1011)
+                           and ti.transfer_type != '4'
+                           and exists
+                         (select 1
+                                  from cs_call_session_info sessioninfo
+                                 where sessioninfo.session_id = ts.session_id
+                                   and sessioninfo.session_type = '0'
+                                   and sessioninfo.begin_time >=
+                                       to_date(#{beginTime},
+                                               'yyyy-mm-dd hh24:mi:ss')
+                                 <![CDATA[  and sessioninfo.begin_time <
+                                       to_date(#{endTime},
+                                               'yyyy-mm-dd hh24:mi:ss'))]]>
+                         order by ts.session_id, ts.trace_id, ts.sample_id asc) a
+                 where a.sample_id != 1001) b
+         group by b.stid, b.source_queue_id
+       <![CDATA[ having sum(b.time_off) <= 20) c]]>
+       <choose>
+		    	<when test="queueId==null or queueId=='all'">
+		    		where c.source_queue_id in
+       (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		where c.source_queue_id =#{queueId}
+		    	</otherwise>
+		    </choose>
+	)<!-- 人工队列放弃数量	 -->
+	,(
+		select count(1) as un_connect_count,
+         sum(endTime - decode(agentTime,null,beginTime,agentTime)) as sum_un_connect_wait_time,
+         max(endTime - beginTime) as max_uncount_wait_time
+         from (
+         select traceinfo.*,
+         beginT.sample_time as beginTime,
+         endT.sample_time as endTime,
+         agentT.sample_time  as agentTime
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample tracesample 
+          on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+          left join cs_call_session_trace_sample beginT
+          on beginT.session_id = traceinfo.session_id 
+          and beginT.trace_id = traceinfo.trace_id 
+          and beginT.sample_id = '1001'
+        left join cs_call_session_trace_sample endT
+      on endT.session_id = traceinfo.session_id 
+    and endT.trace_id = traceinfo.trace_id
+  and endT.sample_id in ('1013','1016')
+  left join cs_call_session_trace_sample agentT
+  on agentT.session_id = traceinfo.session_id
+  and agentT.trace_id = traceinfo.trace_id
+  and agentT.sample_id = '1003'
+         where  <![CDATA[ traceinfo.transfer_type<>'4' and ]]>
+                         tracesample.trace_id is null and tracesample.session_id is null
+                   and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+         <![CDATA[and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+         <![CDATA[and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        )
+        <choose> 
+		    	<when test="queueId==null or queueId=='all'">
+		    		  and  traceinfo.source_queue_id in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		  and  traceinfo.source_queue_id =#{queueId}
+		    	</otherwise>
+		    </choose>
+         
+         ) 
+	)<!-- 20秒内放弃数量	 -->
+	,(
+		select count(1) as un_Connect_Count_In20s
+<!--          ,sum(endTime - decode(agentTime,null,beginTime,agentTime)) as sum_un_connect_wait_time, -->
+<!--          max(endTime - beginTime) as max_uncount_wait_time -->
+         from (
+         select traceinfo.*,
+         beginT.sample_time as beginTime,
+         endT.sample_time as endTime,
+         agentT.sample_time  as agentTime
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample tracesample 
+          on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+          left join cs_call_session_trace_sample beginT
+          on beginT.session_id = traceinfo.session_id 
+          and beginT.trace_id = traceinfo.trace_id 
+          and beginT.sample_id = '1001'
+        left join cs_call_session_trace_sample endT
+      on endT.session_id = traceinfo.session_id 
+    and endT.trace_id = traceinfo.trace_id
+  and endT.sample_id = '1013'
+  left join cs_call_session_trace_sample agentT
+  on agentT.session_id = traceinfo.session_id
+  and agentT.trace_id = traceinfo.trace_id
+  and agentT.sample_id = '1003'
+         where  <![CDATA[ traceinfo.transfer_type<>'4' and ]]>
+                         tracesample.trace_id is null and tracesample.session_id is null
+                         
+        <![CDATA[   and (endT.Sample_Time-agentT.Sample_Time)<=20*24*60*60
+        ]]>
+                   and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+         <![CDATA[and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+         <![CDATA[and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        )
+        <choose>
+		    	<when test="queueId==null or queueId=='all'">
+		    		 and  traceinfo.source_queue_id in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		 and  traceinfo.source_queue_id  =#{queueId}
+		    	</otherwise>
+		    </choose>
+          
+         ) 
+		
+	)<!-- 20秒服务水平	 -->
+	<!-- 平均通话时长	 -->
+	,(
+		select max(decode(tracesample.sample_id,
+                          '1007',
+                          decode(ts.sample_id,
+                          		 '1011', ts.sample_time - tracesample.sample_time,
+                                 '1013',
+                                 ts.sample_time - tracesample.sample_time,
+                                 '1014',
+                                 ts.sample_time - tracesample.sample_time,
+                                 0),
+                          0)) as max_connect_time,
+               sum(decode(tracesample.sample_id,
+                          '1007',
+                          decode(ts.sample_id,
+                                 '1011', ts.sample_time - tracesample.sample_time,
+                                 '1013',
+                                 ts.sample_time - tracesample.sample_time,
+                                 '1014',
+                                 ts.sample_time - tracesample.sample_time,
+                                 0),
+                          0)) as sum_connect_time
+          from cs_call_session_trace_sample tracesample
+          left join cs_call_session_trace_sample ts on ts.trace_id =
+                                                       tracesample.trace_id and ts.session_id=tracesample.session_id
+          left join cs_call_session_trace_info traceinfo
+          on tracesample.session_id = traceinfo.session_id
+                   and tracesample.trace_id = traceinfo.trace_id
+            <choose>
+		    	<when test="queueId==null or queueId=='all'">
+		    		 and traceinfo.source_queue_id in
+                       (select queue_id
+                          from cs_queueinfo
+                         where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		 and traceinfo.source_queue_id =#{queueId}
+		    	</otherwise>
+		    </choose>
+         where traceinfo.trace_id is not null and 
+         traceinfo.session_id is not null and not exists 
+         (select 1 
+         	from cs_call_session_trace_info ti 
+         	where ti.session_id = tracesample.session_id 
+         	and ti.trace_id = tracesample.trace_id 
+         	and ti.transfer_type='4')
+         and exists
+         (select 1
+                  from cs_call_session_info sessioninfo
+                 where sessioninfo.session_id = tracesample.session_id  and sessioninfo.session_type='0'
+        <![CDATA[and  sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+         <![CDATA[and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+         ) 
+	)<!-- 通话排队最长时长 	 -->
+	,(
+		select max(decode(tracesample.sample_id,
+                          '1001',
+                          decode(ts.sample_id,
+                                 '1007',
+                                 ts.sample_time - tracesample.sample_time,
+                                 0),
+                          '1003',
+                          decode(ts.sample_id,
+                                 '1007',
+                                 ts.sample_time - tracesample.sample_time,
+                                 0),
+                          0)) as max_wait_time,
+               sum(decode(tracesample.sample_id,
+                          '1001',
+                          decode(ts.sample_id,
+                                 '1003',
+                                 ts.sample_time - tracesample.sample_time,
+                                 0),
+                          '1003',
+                          decode(ts.sample_id,
+                                 '1007',
+                                 ts.sample_time - tracesample.sample_time,
+                                 0),
+                          0)) as sum_wait_time
+          from cs_call_session_trace_sample tracesample
+          left join cs_call_session_trace_sample ts on ts.trace_id =
+                                                       tracesample.trace_id and ts.session_id=tracesample.session_id
+         left join cs_call_session_trace_info traceinfo
+          on tracesample.session_id = traceinfo.session_id
+                   and tracesample.trace_id = traceinfo.trace_id
+           <choose> 
+		    	<when test="queueId==null or queueId=='all'">
+		    		 and traceinfo.source_queue_id in
+                       (select queue_id
+                          from cs_queueinfo
+                         where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		 and traceinfo.source_queue_id =#{queueId}
+		    	</otherwise>
+		    </choose>
+         where traceinfo.trace_id is not null and 
+         traceinfo.session_id is not null and not exists
+         (select 1 
+         	from cs_call_session_trace_info ti 
+         	where ti.session_id = tracesample.session_id 
+         	and ti.trace_id = tracesample.trace_id 
+         	and ti.transfer_type ='4')
+         and exists
+         (select 1
+                  from cs_call_session_info sessioninfo
+                 where sessioninfo.session_id = tracesample.session_id and sessioninfo.session_type='0'
+         	<![CDATA[and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+	         <![CDATA[and  sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+         )  
+	)<!-- 呼损排队最长时长	 -->
+	,(
+       select count(1) as un_conn_count_1013,
+         sum(endTime - beginTime) as sum_Wait_TimeOfLose,
+         max(endTime - beginTime) as max_Wait_TimeOfLose
+         from (select traceinfo.*,
+               beginT.sample_time as beginTime,
+               endT.sample_time as endTime
+              
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample tracesample on tracesample.trace_id =
+                                                                traceinfo.trace_id
+                                                            and tracesample.session_id =
+                                                                traceinfo.session_id
+                                                            and tracesample.sample_id =
+                                                                '1003'
+          left join cs_call_session_trace_sample beginT on beginT.session_id =
+                                                           traceinfo.session_id
+                                                       and beginT.trace_id =
+                                                           traceinfo.trace_id
+                                                       and beginT.sample_id =
+                                                           '1001'
+          left join cs_call_session_trace_sample endT on endT.session_id =
+                                                         traceinfo.session_id
+                                                     and endT.trace_id =
+                                                         traceinfo.trace_id
+                                                     and endT.sample_id = '1013'
+         where  <![CDATA[ traceinfo.transfer_type<>'4' and ]]>
+                         tracesample.trace_id is null and tracesample.session_id is null
+                   and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+         <![CDATA[and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+         <![CDATA[and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        )
+        <choose> 
+		    	<when test="queueId==null or queueId=='all'">
+		    		  and  traceinfo.source_queue_id in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		  and  traceinfo.source_queue_id =#{queueId}
+		    	</otherwise>
+		    </choose>
+         ) 
+	)<!-- 转接量	 -->
+	,(
+		select count(1) as trans_count
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample t
+          on t.sample_id = '1011' and t.session_id=traceinfo.session_id and t.trace_id = traceinfo.trace_id
+          left join cs_call_session_trace_sample tracesample
+          on  tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+         where <![CDATA[ traceinfo.transfer_type<>'4' ]]>
+                 and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+         	<![CDATA[and  sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+	         <![CDATA[and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+	        )
+	         <choose> 
+		    	<when test="queueId==null or queueId=='all'">
+		    		 and traceinfo.TARGET_QUEUE_ID in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		 and traceinfo.TARGET_QUEUE_ID =#{queueId}
+		    	</otherwise>
+		    </choose>        
+	)<!-- 外呼量	 -->
+	,(
+		select count(1) as callOut_Count
+	          from cs_call_session_trace_sample a,
+	               (
+		           select cc.session_id, cc.tract_id, cf.flow_csid
+		             from cs_custom_caseinfo cc, cs_caseflowlog cf
+		           where cc.flow_id = cf.flow_id
+		           group by cc.session_id, cc.tract_id, cf.flow_csid
+		           ) b
+	         where a.sample_id = '1021'
+	         	and exists ( select 1 from cs_call_session_trace_sample tracesample where tracesample.session_id = a.session_id
+	         	 and exists(SELECT 1
+					 FROM cs_agentinfo agentinfo,cs_group groupinfo,cs_group_queue gq,cs_queueinfo queueinfo,cs_businessinfo bizinfo
+					where 
+					agentinfo.cs_groupid=groupinfo.group_id
+					and groupinfo.group_id=gq.group_id
+					and gq.queue_id=queueinfo.queue_id
+					and queueinfo.business_id=bizinfo.business_id 
+					and agentinfo.cs_id=b.flow_csid
+					<choose>
+		    	<when test="queueId==null or queueId=='all'">
+		    		 and bizinfo.business_id= #{bussinessId}
+		    	</when>
+		    	<otherwise>
+		    		 and queueinfo.queue_id=#{queueId}
+		    	</otherwise>
+		    </choose>
+            	 )
+	         	 and tracesample.trace_id = a.trace_id and tracesample.sample_id='1023')
+	           	 <![CDATA[and a.sample_time < to_date(#{endTime},'yyyy-MM-dd HH24:mi:ss')]]>
+	           	<![CDATA[ and a.sample_time >= to_date(#{beginTime},'yyyy-MM-dd HH24:mi:ss')]]>
+	           and a.session_id = b.session_id
+	           and a.trace_id = b.tract_id
+	)<!-- 重复来电量	 -->
+	,(
+		select count(distinct(sessioninfo.origcaller_number))  as reCallin_Count
+          from cs_call_session_info sessioninfo 
+          left join cs_call_session_trace_info traceinfo on sessioninfo.session_id=traceinfo.session_id
+          where sessioninfo.session_type='0'
+         <![CDATA[  and  sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')
+          and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')  ]]>  
+         <choose> 
+		    	<when test="queueId==null or queueId=='all'">
+		    		  and traceinfo.TARGET_QUEUE_ID in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		  and traceinfo.TARGET_QUEUE_ID  =#{queueId}
+		    	</otherwise>
+		    </choose>
+	)
+	,(
+		select sum(decode(sessioninfo.user_grade, -1, 0, 1)) as satisfacing_count,   <!-- 满意度评价量 -->
+			   sum(decode(sessioninfo.user_grade, -1, 1, 0)) unAppraise_Count, 
+               sum(decode(sessioninfo.user_grade, 0, 1, 0)) good_count,  <!-- 满意评价量 -->
+               sum(decode(sessioninfo.user_grade, 1, 1, 0)) general_count,  <!-- 一般评价量 -->
+               sum(decode(sessioninfo.user_grade, 2, 1, 0)) bad_service_count,  <!-- 对服务不满意评价量 -->
+               sum(decode(sessioninfo.user_grade, 3, 1, 0)) bad_plan_count,  <!-- 对方案不满意评价量 -->
+               sum(decode(sessioninfo.user_grade, 4, 1, 0)) bad_count   <!-- 两者均不满意评价量 -->
+          from cs_call_session_info sessioninfo
+          left join cs_call_session_trace_info traceinfo
+          on traceinfo.session_id = sessioninfo.session_id
+          and traceinfo.target_queue_id is null
+          <choose> 
+		    	<when test="queueId==null or queueId=='all'">
+		    		 and traceinfo.source_queue_id in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		 and traceinfo.source_queue_id =#{queueId}
+		    	</otherwise>
+		    </choose>
+          left join cs_call_session_trace_sample tracesample
+                 on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+          where sessioninfo.session_type='0'
+          and traceinfo.transfer_type != '4'
+          and traceinfo.trace_id is not null and traceinfo.session_id is not null 
+          and tracesample.trace_id is not null
+          and tracesample.session_id is not null
+        <![CDATA[ and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+         <![CDATA[ and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+	)
+	
+	</select>
+	<select id="queryAgentCallStatisticsData" parameterType="callAllStatisticsObj" resultType="callAgentStatisticsObj">
+	select agq.cs_id agentId,
+       agq.cs_name agentName,
+       agq.business_id,
+       agq.business_name bussinessName,
+       nvl(dbt.connect_count,0) connectCount
+  from (select distinct ca.cs_id,
+                        ca.cs_name,
+                        cb.business_id,
+                        cb.business_name
+        
+          from cs_agentinfo    ca,
+               cs_queueinfo    cq,
+               cs_group_queue  cgq,
+               cs_businessinfo cb
+         where ca.cs_groupid = cgq.group_id
+           and cq.queue_id = cgq.queue_id
+           and cb.business_id = cq.business_id
+           and ca.cs_status = 0
+           <choose> 
+		    	<when test="queueId==null or queueId=='all'">
+		    		 and cq.business_id = #{bussinessId}
+		    	</when>
+		    	<otherwise>
+		    		 and cq.queue_id=#{queueId}
+		    	</otherwise>
+		    </choose>
+           ) agq
+  left join (
+  <!--  人工实际接听按照人总数目 -->
+  	select  traceinfo.agent_id, count(1) connect_count
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample tracesample
+                 on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+         where  <![CDATA[ traceinfo.transfer_type<>'4' and  ]]>  
+         tracesample.trace_id is not null
+         and tracesample.session_id is not null
+                    and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+        <if test="beginTime != '' and beginTime != null">
+         <![CDATA[ and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        </if>
+        <if test="endTime != '' and endTime != null">
+         <![CDATA[ and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        </if>)
+		<if test="bussinessId != '' and bussinessId != null">
+			<choose> 
+		    	<when test="queueId==null or queueId=='all'">
+		    		 and traceinfo.source_queue_id in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		 and traceinfo.source_queue_id =#{queueId}
+		    	</otherwise>
+		    </choose>
+		</if>
+		group by traceinfo.agent_id
+  )dbt on agq.cs_id = dbt.agent_id
+	</select>
+	
+	<select id="queryAgentCountCallStatisticsData" parameterType="callAllStatisticsObj" resultType="callAgentStatisticsObj">
+	 select * from (select cb.business_id bussinessId,
+       cb.business_name bussinessName
+  from cs_businessinfo cb
+ where cb.business_id = #{bussinessId}),(
+<!--  人工实际接听总数目 -->
+	select count(1) as connectCount
+          from cs_call_session_trace_info traceinfo
+          left join cs_call_session_trace_sample tracesample
+                 on tracesample.trace_id = traceinfo.trace_id
+                   and tracesample.session_id = traceinfo.session_id
+                   and tracesample.sample_id = '1007'
+         where  <![CDATA[ traceinfo.transfer_type<>'4' and  ]]>  
+         tracesample.trace_id is not null
+         and tracesample.session_id is not null
+                    and exists (select 1 from cs_call_session_info sessioninfo where sessioninfo.session_id=traceinfo.session_id and sessioninfo.session_type='0'
+        <if test="beginTime != '' and beginTime != null">
+         <![CDATA[ and sessioninfo.begin_time >= to_date(#{beginTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        </if>
+        <if test="endTime != '' and endTime != null">
+         <![CDATA[ and sessioninfo.begin_time < to_date(#{endTime}, 'yyyy-mm-dd hh24:mi:ss')]]>
+        </if>)
+		<if test="bussinessId != '' and bussinessId != null">
+		<choose> 
+		    	<when test="queueId==null or queueId=='all'">
+		    		 and traceinfo.source_queue_id in (select queue_id from cs_queueinfo where business_id = #{bussinessId})
+		    	</when>
+		    	<otherwise>
+		    		 and traceinfo.source_queue_id =#{queueId}
+		    	</otherwise>
+		    </choose>
+		</if>)
+	</select>
+</mapper>
